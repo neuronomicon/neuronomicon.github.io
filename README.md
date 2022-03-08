@@ -11,4 +11,4 @@
 ### 세번째 제목
 
 세번째 안녕
-![ex_screenshot](./imgs/bullet.jpg)
+![img1](./imgs/bullet.jpg)
