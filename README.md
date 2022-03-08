@@ -11,5 +11,3 @@
 ### 세번째 제목
 
 세번째 안녕
-
-<img src="./imgs/bullet.jpg">
