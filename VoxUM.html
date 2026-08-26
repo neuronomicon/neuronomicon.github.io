@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voxelyze-Unity System User Manual (v0.5)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h3 {
+            color: #2980b9;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .warning {
+            background-color: #ffeaea;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #c0392b;
+        }
+        code {
+            background-color: #e8eaed;
+            color: #d35400;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95em;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        ul {
+            margin-bottom: 15px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .success {
+            background-color: #e8f8f5;
+            border-left: 4px solid #1abc9c;
+            padding: 15px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Voxelyze-Unity System User Manual (v0.5)</h1>
+
+    <div class="warning">
+        <strong>※ WARNING:</strong> This architecture manually controls the lock-step synchronization of the agents via scripts. Therefore, <strong>you must NEVER use the <code>Decision Requester</code> component provided by Unity ML-Agents.</strong>
+    </div>
+
+    <h3>Step 1: Global Manager Setup</h3>
+    <p>Create a central command center that controls the timing of all simulations, communication with the C++ DLL, and toggles the ML-Agents mode globally.</p>
+    <ol>
+        <li>In the Unity Hierarchy window, create a new <strong>Empty GameObject</strong> and name it <code>VoxelEngineManager</code>.</li>
+        <li>Add the following <strong>three core scripts</strong> to this object in order (Add Component):
+            <ul>
+                <li><code>VoxelEngineCore.cs</code></li>
+                <li><code>VoxelRobotBuilder.cs</code></li>
+                <li><code>VoxelRLManager.cs</code></li>
+            </ul>
+        </li>
+        <li><strong>VoxelEngineCore Settings:</strong>
+            <ul>
+                <li><code>Dll Folder Path</code>: Enter the absolute path to the directory containing your built C++ DLL file. (Alternatively, use the custom editor menu <code>Voxel Engine > Select DLL File</code> to set this automatically).</li>
+                <li><code>Is Ml Agent</code>: <strong>(Crucial)</strong> This single checkbox toggles the entire scene between Training (RL) mode (ON) and pure Rendering/Physics Test mode (OFF). Ensure this is checked for training.</li>
+            </ul>
+        </li>
+        <li><strong>VoxelRLManager Settings:</strong>
+            <ul>
+                <li><code>Steps Per Simulation Cycle</code>: The number of micro-steps the C++ engine computes per call (e.g., 20).</li>
+                <li><code>Custom Decision Period</code>: The AI's decision-making frequency (e.g., 25). This variable centrally forces the action cycle for all robots.</li>
+                <li><code>Action Size Per Robot</code>: The total number of actions the neural network outputs (e.g., 4 motors × 2 parameters = 8).</li>
+            </ul>
+        </li>
+    </ol>
+
+    <h3>Step 2: Training Environment & Obstacle Setup</h3>
+    <p>Set up the isolated stage where each robot will act independently.</p>
+    <ol>
+        <li>Create a new <strong>Empty GameObject</strong> in the scene and name it <code>TrainingEnvironment_0</code>.</li>
+        <li>Attach the <code>VoxelPhysicsManager.cs</code> script to this object. (This relays rigid-body collision forces within the training environment).</li>
+        <li>Add the following elements as <strong>Child objects</strong> of <code>TrainingEnvironment_0</code>:
+            <ul>
+                <li><strong>Robot Folder:</strong> Create an empty object and name it <code>VoxelRobot_0</code>.</li>
+                <li><strong>Terrain:</strong> Create a <code>3D Object -> Plane</code> to act as the floor.</li>
+                <li><strong>Colliders (Optional):</strong> Create interactive objects like Cubes or Spheres. (These MUST have a <code>Rigidbody</code> and a <code>Box/Sphere Collider</code> attached).</li>
+            </ul>
+        </li>
+        <li><strong>Register Colliders:</strong> Drag and drop the newly created collider objects into the <code>Interactive Objects</code> array in the <code>VoxelPhysicsManager</code> inspector.</li>
+    </ol>
+
+    <h3>Step 3: Individual Robot Instance Setup</h3>
+    <p>Configure the actual robot object where voxels will be rendered and the AI will reside.</p>
+    <ol>
+        <li>Select the <code>VoxelRobot_0</code> object created earlier and attach the following scripts:
+            <ul>
+                <li><code>VoxelGraphicRenderer.cs</code></li>
+                <li><code>VoxelPhysicsInfo.cs</code></li>
+                <li><code>VoxelRobotAgent.cs</code></li>
+            </ul>
+        </li>
+        <li>When you attach <code>VoxelRobotAgent</code>, Unity will automatically attach the <code>Behavior Parameters</code> component alongside it.</li>
+        <li><strong>(Mandatory Check)</strong> If the <code>Decision Requester</code> component is attached, you <strong>must delete it (Remove Component)</strong>. Action requests are handled manually by the <code>VoxelRLManager</code>.</li>
+    </ol>
+
+    <h3>Step 4: Target Setup (Optional)</h3>
+    <p>If you are training for target tracking tasks, set up a target object.</p>
+    <ol>
+        <li>As a child of <code>TrainingEnvironment_0</code>, create a <code>3D Object -> Sphere</code> and rename it to <code>Target</code>.</li>
+        <li>Apply a distinct, highly visible material (e.g., bright red) so it's easily recognizable.</li>
+    </ol>
+
+    <h3>Step 5: Task Profile (ScriptableObject) Creation & Link</h3>
+    <p>Create an asset that defines the robot's brain specifications (observation size, action size, morphology).</p>
+    <ol>
+        <li>In the Project window, right-click and select <code>Create -> RL Tasks -> Target Tracking Profile</code> to create a new asset file.</li>
+        <li>Click the created asset. In the Inspector, you will see configuration values (Space Size, Continuous Actions, etc.) protected by <code>[ReadOnly]</code>. These values are hardcoded internally based on your task design to prevent accidental misconfigurations.</li>
+        <li>Select the <code>VoxelRobot_0</code> object in the scene again.</li>
+        <li><strong>Drag and drop the created asset file</strong> into the <strong>Task Profile</strong> slot on the <code>VoxelRobotAgent</code> component.</li>
+        <li>Once assigned, a cleanly organized <code>Runtime State</code> section will expand below it. <strong>Drag and drop the <code>Target</code> object (from Step 4) into the <code>Target Transform</code> slot</strong> located there. (Internal calculation variables are cleanly hidden via <code>[HideInInspector]</code>).</li>
+    </ol>
+
+    <h3>Step 6: Synchronization Check & Execution</h3>
+    <p>Perform a final visual check to ensure the ML-Agents parameters match the profile's specifications. (Applying the profile usually overwrites these automatically).</p>
+    <ol>
+        <li>In the <code>Behavior Parameters</code> component of <code>VoxelRobot_0</code>, visually verify the following:
+            <ul>
+                <li><strong>Vector Observation -> Space Size:</strong> Check that this matches the observation count defined in your <code>TargetTrackingProfile</code>.</li>
+                <li><strong>Actions -> Continuous Actions:</strong> Check that this matches the value set in the manager during Step 1.</li>
+            </ul>
+        </li>
+        <li>If you want a 10-second episode (e.g., 10,000 C++ steps), the agent's decision count (Max Step) should be configured as: 10,000 steps / 500 steps (1 decision cycle) = <strong>20</strong>.</li>
+    </ol>
+
+    <div class="success">
+        <p><strong>🎉 All preparations are complete!</strong></p>
+        <ul>
+            <li>Press the <strong>Play (▶)</strong> button at the top. The system will intelligently auto-launch into either Training (RL) mode or Smooth Rendering (Test) mode based on your <code>Is Ml Agent</code> checkbox.</li>
+            <li>For massive Multi-Agent training, simply duplicate (Ctrl+D) the entire <code>TrainingEnvironment_0</code> GameObject as many times as you want (e.g., 16 times). This will immediately initiate parallel training, fully utilizing 100% of your multi-core CPU threads!</li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>
