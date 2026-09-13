@@ -1,166 +1,1225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoxUnityML User Manual (v0.5)</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
-        }
-        h1 {
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-        h3 {
-            color: #2980b9;
-            margin-top: 30px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-        .warning {
-            background-color: #ffeaea;
-            border-left: 4px solid #e74c3c;
-            padding: 15px;
-            margin-bottom: 20px;
-            color: #c0392b;
-        }
-        code {
-            background-color: #e8eaed;
-            color: #d35400;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.95em;
-        }
-        .container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        ul {
-            margin-bottom: 15px;
-        }
-        li {
-            margin-bottom: 8px;
-        }
-        .success {
-            background-color: #e8f8f5;
-            border-left: 4px solid #1abc9c;
-            padding: 15px;
-            margin-top: 30px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>VoxUnityML First Training Run</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap">
+
+<style>
+:root {
+  --paper: #F1F3F7;
+  --surface: #FFFFFF;
+  --surface-2: #E7EAF1;
+  --rule: #CBD2DE;
+  --rule-soft: #DFE4EC;
+  --ink: #14181F;
+  --ink-soft: #56607180;
+  --muted: #5A6475;
+
+  --cold: #1F5FA8;
+  --cold-bg: #E8F0F9;
+  --hot: #C05314;
+  --hot-bg: #FCF0E7;
+
+  --ok: #0F7A4A;
+  --ok-bg: #E6F5EE;
+  --warn: #9A6300;
+  --warn-bg: #FDF3E0;
+  --stop: #B0281E;
+  --stop-bg: #FCEDEB;
+
+  --code-bg: #EDEFF5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0C1016;
+    --surface: #141A23;
+    --surface-2: #1B222D;
+    --rule: #26303D;
+    --rule-soft: #1E2731;
+    --ink: #DCE3EE;
+    --muted: #8794A6;
+
+    --cold: #5C9AE0;
+    --cold-bg: #11202F;
+    --hot: #E58A47;
+    --hot-bg: #291709;
+
+    --ok: #4ECB8E;
+    --ok-bg: #0A2318;
+    --warn: #E0AC4B;
+    --warn-bg: #241A07;
+    --stop: #F0796C;
+    --stop-bg: #2A110E;
+
+    --code-bg: #0E131B;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0C1016;
+  --surface: #141A23;
+  --surface-2: #1B222D;
+  --rule: #26303D;
+  --rule-soft: #1E2731;
+  --ink: #DCE3EE;
+  --muted: #8794A6;
+
+  --cold: #5C9AE0;
+  --cold-bg: #11202F;
+  --hot: #E58A47;
+  --hot-bg: #291709;
+
+  --ok: #4ECB8E;
+  --ok-bg: #0A2318;
+  --warn: #E0AC4B;
+  --warn-bg: #241A07;
+  --stop: #F0796C;
+  --stop-bg: #2A110E;
+
+  --code-bg: #0E131B;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Source Sans 3', system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+code, .mono { font-family: 'Source Code Pro', ui-monospace, monospace; }
+
+h1, h2, h3 { font-family: 'Archivo', system-ui, sans-serif; text-wrap: balance; }
+
+/* ── MASTHEAD ───────────────────────────────── */
+.masthead {
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+}
+.masthead-in {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 34px 24px 0;
+}
+.brandline {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.brand {
+  font-family: 'Archivo', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--cold);
+}
+.ver {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 1px 7px;
+}
+h1 {
+  font-size: clamp(30px, 4.2vw, 42px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -.015em;
+  margin-bottom: 14px;
+}
+.standfirst {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 62ch;
+  margin-bottom: 26px;
+}
+
+/* spec strip */
+.specs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+}
+.spec {
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 13px 16px;
+  background: var(--surface);
+}
+.spec-k {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.spec-v {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em;
+}
+.spec-n { font-size: 12px; color: var(--muted); font-family: 'Source Sans 3', sans-serif; }
+@media (max-width: 780px) { .specs { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── SHELL ──────────────────────────────────── */
+.shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 110px;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 900px) { .shell { grid-template-columns: 1fr; gap: 0; } }
+
+/* rail */
+.rail {
+  position: sticky;
+  top: 22px;
+  padding-top: 44px;
+  font-size: 13.5px;
+}
+@media (max-width: 900px) { .rail { display: none; } }
+.rail-h {
+  font-family: 'Archivo', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid var(--rule);
+}
+.rail a {
+  display: flex;
+  gap: 9px;
+  padding: 4px 0;
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 3px;
+}
+.rail a:hover { color: var(--cold); }
+.rail a:focus-visible { outline: 2px solid var(--cold); outline-offset: 2px; }
+.rail-n {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11.5px;
+  color: var(--cold);
+  min-width: 15px;
+  padding-top: 2px;
+}
+.rail-gap { height: 12px; }
+
+/* ── ARTICLE ────────────────────────────────── */
+/* The column runs wide so tables, code and figures get room.
+   Running prose is capped separately to a readable measure. */
+article { padding-top: 44px; max-width: 880px; }
+
+p, ol.steps, ul.bul, .note, figcaption, .tsq-a { max-width: 68ch; }
+
+section { scroll-margin-top: 22px; margin-bottom: 34px; }
+
+.sec-head { margin-bottom: 14px; }
+.sec-eyebrow {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--cold);
+  margin-bottom: 5px;
+}
+h2 {
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -.012em;
+  line-height: 1.2;
+}
+h3 {
+  font-size: 16.5px;
+  font-weight: 600;
+  margin: 26px 0 9px;
+}
+
+p { margin-bottom: 14px; }
+p:last-child { margin-bottom: 0; }
+
+a.inl { color: var(--cold); text-decoration: underline; text-underline-offset: 2px; }
+
+strong { font-weight: 600; }
+
+/* lists — markers are absolutely positioned so each <li> stays a normal
+   block box. A grid or flex <li> would turn every inline <code> and
+   <strong> into its own grid item and shred the sentence. */
+ol.steps, ul.bul {
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-bottom: 16px;
+}
+
+ol.steps { counter-reset: s; }
+ol.steps > li {
+  counter-increment: s;
+  position: relative;
+  padding-left: 34px;
+}
+ol.steps > li::before {
+  content: counter(s);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 22px;
+  height: 22px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cold);
+  background: var(--cold-bg);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+ul.bul > li {
+  position: relative;
+  padding-left: 20px;
+}
+ul.bul > li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: .62em;
+  width: 5px;
+  height: 5px;
+  background: var(--muted);
+  border-radius: 50%;
+}
+
+ol.steps ul.bul, ul.bul ul.bul { margin-top: 9px; margin-bottom: 0; gap: 7px; }
+
+/* inline code */
+code {
+  font-size: .89em;
+  background: var(--code-bg);
+  border: 1px solid var(--rule-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+  word-break: break-word;
+}
+
+/* code block */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--rule-soft);
+  border-radius: 5px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 13px;
+  line-height: 1.58;
+  margin-bottom: 16px;
+  tab-size: 2;
+}
+pre code { background: none; border: none; padding: 0; font-size: inherit; }
+.cm { color: var(--muted); }
+.hl { color: var(--hot); font-weight: 600; }
+
+/* callout */
+.note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 5px;
+  font-size: 15px;
+  margin-bottom: 16px;
+  background: var(--cold-bg);
+  border: 1px solid color-mix(in srgb, var(--cold) 24%, transparent);
+}
+.note-t {
+  font-family: 'Archivo', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--cold);
+  padding-top: 3px;
+  white-space: nowrap;
+}
+.note.stop { background: var(--stop-bg); border-color: color-mix(in srgb, var(--stop) 26%, transparent); }
+.note.stop .note-t { color: var(--stop); }
+.note.warn { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 28%, transparent); }
+.note.warn .note-t { color: var(--warn); }
+.note.ok { background: var(--ok-bg); border-color: color-mix(in srgb, var(--ok) 26%, transparent); }
+.note.ok .note-t { color: var(--ok); }
+
+/* table */
+.tw { overflow-x: auto; margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th {
+  text-align: left;
+  font-family: 'Archivo', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface-2);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+td.m { font-family: 'Source Code Pro', monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* figure */
+figure { margin-bottom: 18px; }
+figure svg { width: 100%; height: auto; max-width: 100%; display: block; color: var(--ink); }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 9px; }
+
+/* temperature scale */
+.tscale { margin: 18px 0; }
+.tscale-bar {
+  height: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: linear-gradient(to right, #1F5FA8 0%, #6E93C4 30%, #9AA3B2 50%, #D89A64 72%, #C05314 100%);
+}
+.tscale-ticks {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.tscale-ticks span:nth-child(2) { text-align: center; }
+.tscale-ticks span:nth-child(3) { text-align: right; }
+
+/* file tree */
+.tree {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  padding: 14px 16px;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+.tree .dim { color: var(--muted); }
+.tree .mark { color: var(--hot); font-weight: 600; }
+
+/* troubleshoot */
+.tsq {
+  border-top: 1px solid var(--rule-soft);
+  padding: 14px 0;
+}
+.tsq:first-of-type { border-top: none; padding-top: 0; }
+.tsq-q {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--stop);
+  margin-bottom: 6px;
+}
+.tsq-a { font-size: 15px; }
+
+hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
 </head>
 <body>
-
-<div class="container">
-    <h1>VoxUnityML (v0.5): Voxelyze-Unity-MLAgents System User Manual (v0.2)</h1>
-
-    <div class="warning">
-        <strong>※ WARNING:</strong> This architecture manually controls the lock-step synchronization of the agents via scripts. Therefore, <strong>you must NEVER use the <code>Decision Requester</code> component provided by Unity ML-Agents.</strong>
+<header class="masthead">
+  <div class="masthead-in">
+    <div class="brandline">
+      <span class="brand">VoxUnityML</span>
+      <span class="ver">v0.9</span>
     </div>
+    <h1>First Training Run</h1>
+    <p class="standfirst">
+      Set up a Voxelyze soft-body robot in Unity, wire it to ML-Agents, and start a PPO run.
+      This guide assumes you have never opened the project before and walks through one
+      working scene end to end.
+    </p>
 
-    <h3>Step 1: Global Manager Setup</h3>
-    <p>Create a central command center that controls the timing of all simulations, communication with the C++ DLL, and toggles the ML-Agents mode globally.</p>
-    <ol>
-        <li>In the Unity Hierarchy window, create a new <strong>Empty GameObject</strong> and name it <code>VoxelEngineManager</code>.</li>
-        <li>Add the following <strong>three core scripts</strong> to this object in order (Add Component):
-            <ul>
-                <li><code>VoxelEngineCore.cs</code></li>
-                <li><code>VoxelRobotBuilder.cs</code></li>
-                <li><code>VoxelRLManager.cs</code></li>
-            </ul>
-        </li>
-        <li><strong>VoxelEngineCore Settings:</strong>
-            <ul>
-                <li><code>Dll Folder Path</code>: Enter the absolute path to the directory containing your built C++ DLL file. (Alternatively, use the custom editor menu <code>Voxel Engine > Select DLL File</code> to set this automatically).</li>
-                <li><code>Is Ml Agent</code>: <strong>(Crucial)</strong> This single checkbox toggles the entire scene between Training (RL) mode (ON) and pure Rendering/Physics Test mode (OFF). Ensure this is checked for training.</li>
-            </ul>
-        </li>
-        <li><strong>VoxelRLManager Settings:</strong>
-            <ul>
-                <li><code>Steps Per Simulation Cycle</code>: The number of micro-steps the C++ engine computes per call (e.g., 20).</li>
-                <li><code>Custom Decision Period</code>: The AI's decision-making frequency (e.g., 25). This variable centrally forces the action cycle for all robots.</li>
-                <li><code>Action Size Per Robot</code>: The total number of actions the neural network outputs (e.g., 4 motors × 2 parameters = 8).</li>
-            </ul>
-        </li>
-    </ol>
-
-    <h3>Step 2: Training Environment & Obstacle Setup</h3>
-    <p>Set up the isolated stage where each robot will act independently.</p>
-    <ol>
-        <li>Create a new <strong>Empty GameObject</strong> in the scene and name it <code>TrainingEnvironment_0</code>.</li>
-        <li>Attach the <code>VoxelPhysicsManager.cs</code> script to this object. (This relays rigid-body collision forces within the training environment).</li>
-        <li>Add the following elements as <strong>Child objects</strong> of <code>TrainingEnvironment_0</code>:
-            <ul>
-                <li><strong>Robot Folder:</strong> Create an empty object and name it <code>VoxelRobot_0</code>.</li>
-                <li><strong>Terrain:</strong> Create a <code>3D Object -> Plane</code> to act as the floor.</li>
-                <li><strong>Colliders (Optional):</strong> Create interactive objects like Cubes or Spheres. (These MUST have a <code>Rigidbody</code> and a <code>Box/Sphere Collider</code> attached).</li>
-            </ul>
-        </li>
-        <li><strong>Register Colliders:</strong> Drag and drop the newly created collider objects into the <code>Interactive Objects</code> array in the <code>VoxelPhysicsManager</code> inspector.</li>
-    </ol>
-
-    <h3>Step 3: Individual Robot Instance Setup</h3>
-    <p>Configure the actual robot object where voxels will be rendered and the AI will reside.</p>
-    <ol>
-        <li>Select the <code>VoxelRobot_0</code> object created earlier and attach the following scripts:
-            <ul>
-                <li><code>VoxelGraphicRenderer.cs</code></li>
-                <li><code>VoxelPhysicsInfo.cs</code></li>
-                <li><code>VoxelRobotAgent.cs</code></li>
-            </ul>
-        </li>
-        <li>When you attach <code>VoxelRobotAgent</code>, Unity will automatically attach the <code>Behavior Parameters</code> component alongside it.</li>
-        <li><strong>(Mandatory Check)</strong> If the <code>Decision Requester</code> component is attached, you <strong>must delete it (Remove Component)</strong>. Action requests are handled manually by the <code>VoxelRLManager</code>.</li>
-    </ol>
-
-    <h3>Step 4: Target Setup (Optional)</h3>
-    <p>If you are training for target tracking tasks, set up a target object.</p>
-    <ol>
-        <li>As a child of <code>TrainingEnvironment_0</code>, create a <code>3D Object -> Sphere</code> and rename it to <code>Target</code>.</li>
-        <li>Apply a distinct, highly visible material (e.g., bright red) so it's easily recognizable.</li>
-    </ol>
-
-    <h3>Step 5: Task Profile (ScriptableObject) Creation & Link</h3>
-    <p>Create an asset that defines the robot's brain specifications (observation size, action size, morphology).</p>
-    <ol>
-        <li>In the Project window, right-click and select <code>Create -> RL Tasks -> Target Tracking Profile</code> to create a new asset file.</li>
-        <li>Click the created asset. In the Inspector, you will see configuration values (Space Size, Continuous Actions, etc.) protected by <code>[ReadOnly]</code>. These values are hardcoded internally based on your task design to prevent accidental misconfigurations.</li>
-        <li>Select the <code>VoxelRobot_0</code> object in the scene again.</li>
-        <li><strong>Drag and drop the created asset file</strong> into the <strong>Task Profile</strong> slot on the <code>VoxelRobotAgent</code> component.</li>
-        <li>Once assigned, a cleanly organized <code>Runtime State</code> section will expand below it. <strong>Drag and drop the <code>Target</code> object (from Step 4) into the <code>Target Transform</code> slot</strong> located there. (Internal calculation variables are cleanly hidden via <code>[HideInInspector]</code>).</li>
-    </ol>
-
-    <h3>Step 6: Synchronization Check & Execution</h3>
-    <p>Perform a final visual check to ensure the ML-Agents parameters match the profile's specifications. (Applying the profile usually overwrites these automatically).</p>
-    <ol>
-        <li>In the <code>Behavior Parameters</code> component of <code>VoxelRobot_0</code>, visually verify the following:
-            <ul>
-                <li><strong>Vector Observation -> Space Size:</strong> Check that this matches the observation count defined in your <code>TargetTrackingProfile</code>.</li>
-                <li><strong>Actions -> Continuous Actions:</strong> Check that this matches the value set in the manager during Step 1.</li>
-            </ul>
-        </li>
-        <li>If you want a 10-second episode (e.g., 10,000 C++ steps), the agent's decision count (Max Step) should be configured as: 10,000 steps / 500 steps (1 decision cycle) = <strong>20</strong>.</li>
-    </ol>
-
-    <div class="success">
-        <p><strong>🎉 All preparations are complete!</strong></p>
-        <ul>
-            <li>Press the <strong>Play (▶)</strong> button at the top. The system will intelligently auto-launch into either Training (RL) mode or Smooth Rendering (Test) mode based on your <code>Is Ml Agent</code> checkbox.</li>
-            <li>For massive Multi-Agent training, simply duplicate (Ctrl+D) the entire <code>TrainingEnvironment_0</code> GameObject as many times as you want (e.g., 16 times). This will immediately initiate parallel training, fully utilizing 100% of your multi-core CPU threads!</li>
-        </ul>
+    <div class="specs">
+      <div class="spec">
+        <div class="spec-k">Physics</div>
+        <div class="spec-v">1000 <span class="spec-n">Hz</span></div>
+      </div>
+      <div class="spec">
+        <div class="spec-k">Decisions</div>
+        <div class="spec-v">50 <span class="spec-n">Hz</span></div>
+      </div>
+      <div class="spec">
+        <div class="spec-k">Observation</div>
+        <div class="spec-v">240 <span class="spec-n">floats</span></div>
+      </div>
+      <div class="spec">
+        <div class="spec-k">Action</div>
+        <div class="spec-v">33 <span class="spec-n">continuous</span></div>
+      </div>
     </div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Steps">
+    <div class="rail-h">Contents</div>
+    <a href="#prereq"><span class="rail-n">·</span><span>Before you start</span></a>
+    <a href="#loop"><span class="rail-n">·</span><span>How the loop works</span></a>
+    <div class="rail-gap"></div>
+    <a href="#s1"><span class="rail-n">1</span><span>Scene skeleton</span></a>
+    <a href="#s2"><span class="rail-n">2</span><span>Training area</span></a>
+    <a href="#s3"><span class="rail-n">3</span><span>Robot object</span></a>
+    <a href="#s4"><span class="rail-n">4</span><span>Body Profile</span></a>
+    <a href="#s5"><span class="rail-n">5</span><span>Task Profile</span></a>
+    <a href="#s6"><span class="rail-n">6</span><span>Check the numbers</span></a>
+    <a href="#s7"><span class="rail-n">7</span><span>Training config</span></a>
+    <a href="#s8"><span class="rail-n">8</span><span>Run it</span></a>
+    <div class="rail-gap"></div>
+    <a href="#scale"><span class="rail-n">·</span><span>Scaling up</span></a>
+    <a href="#build"><span class="rail-n">·</span><span>Standalone builds</span></a>
+    <a href="#trouble"><span class="rail-n">·</span><span>Troubleshooting</span></a>
+  </nav>
+
+  <article>
+
+    <!-- ── PREREQ ─────────────────────────── -->
+    <section id="prereq">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Before you start</div>
+        <h2>What you need on disk</h2>
+      </div>
+
+      <ul class="bul">
+        <li><strong>Unity 6</strong> with Windows Build Support. The project targets <code>StandaloneWindows64</code>.</li>
+        <li><strong>ML-Agents</strong> Unity package installed, plus the matching Python package in a conda or venv environment.</li>
+        <li><strong>The compiled Voxelyze DLL.</strong> Build the C++ solution first — Unity loads it through <code>VoxelDllConfig.DLL_NAME</code>. Nothing in this guide works without it.</li>
+        <li><strong>A <code>.vox</code> robot file</strong> in <code>StreamingAssets</code>. This guide uses <code>Test_V33_M33_All_Motor.vox</code> — 33 voxels, all of them muscle.</li>
+      </ul>
+
+      <div class="note warn">
+        <span class="note-t">Rebuild</span>
+        <span>If you change any C++ source, rebuild the DLL <em>and</em> copy it into the Unity project. Editing the source alone leaves the old binary loaded, and the symptoms look like Unity bugs rather than a stale DLL.</span>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── LOOP ───────────────────────────── -->
+    <section id="loop">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Concept</div>
+        <h2>How the control loop works</h2>
+      </div>
+
+      <p>
+        Read this before touching the scene. The timing model is the one thing here that differs
+        from a stock ML-Agents project, and almost every setup mistake traces back to it.
+      </p>
+
+      <p>
+        Physics runs on a <strong>background C++ thread</strong>, asynchronously. Unity cannot simply
+        step the Academy on a fixed schedule and hope the physics kept up — it has to wait for the
+        worker to finish, then hand over the next batch of actions. So <code>VoxelRLManager</code>
+        disables automatic stepping and drives the whole cycle by hand from <code>Update()</code>.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 780 205" role="img"
+             aria-label="Cycle: Unity Update polls a ready flag, runs EnvironmentStep, agents submit actions to a shared buffer, and the C++ worker thread runs twenty one-millisecond physics steps before raising the ready flag again.">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 8" refX="9" refY="4"
+                    markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <!-- boxes -->
+          <rect x="24"  y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+          <rect x="220" y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+          <rect x="416" y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+          <rect x="612" y="44" width="140" height="64" rx="4" fill="none" stroke="#C05314" stroke-width="2"/>
+
+          <!-- box labels -->
+          <text x="94"  y="70" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Unity Update()</text>
+          <text x="94"  y="89" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">polls ready flag</text>
+
+          <text x="290" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">EnvironmentStep()</text>
+          <text x="290" y="89" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">observe → decide</text>
+
+          <text x="486" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Action buffer</text>
+          <text x="486" y="89" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">N agents, lock-step</text>
+
+          <text x="682" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="#C05314">C++ worker thread</text>
+          <text x="682" y="89" text-anchor="middle" font-size="11.5" fill="#C05314" opacity=".8">20 × 1 ms steps</text>
+
+          <!-- arrows -->
+          <line x1="164" y1="76" x2="214" y2="76" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+          <text x="189" y="66" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">ready</text>
+
+          <line x1="360" y1="76" x2="410" y2="76" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+          <text x="385" y="66" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">submit</text>
+
+          <line x1="556" y1="76" x2="606" y2="76" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+          <text x="581" y="66" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">all N in</text>
+
+          <!-- return path -->
+          <path d="M 682 108 L 682 166 L 94 166 L 94 112" fill="none" stroke="#C05314"
+                stroke-width="1.6" marker-end="url(#ah)" color="#C05314"/>
+          <text x="388" y="185" text-anchor="middle" font-size="11.5" fill="#C05314">
+            simulation advances 20 ms, then raises the ready flag
+          </text>
+        </svg>
+        <figcaption>
+          One decision cycle. Unity never advances physics itself — it waits on the worker, then
+          releases the next batch of actions. Each full turn of this loop is 20&nbsp;ms of simulated time.
+        </figcaption>
+      </figure>
+
+      <div class="note stop">
+        <span class="note-t">Never</span>
+        <span>
+          <strong>Do not add a <code>Decision Requester</code> component.</strong> It would request
+          decisions on Unity's own schedule, independent of the C++ worker, and break the lock-step:
+          agents would submit actions while physics is mid-flight. The manager calls
+          <code>RequestDecision()</code> for every agent itself. If you find one on a robot, remove it.
+        </span>
+      </div>
+
+      <h3>Why <code>time_scale</code> barely helps here</h3>
+      <p>
+        In a stock ML-Agents project the Academy steps from <code>FixedUpdate</code>, so raising
+        <code>time_scale</code> multiplies throughput. This project steps from <code>Update()</code>,
+        which fires <strong>once per rendered frame</strong> regardless of time scale. The knob that
+        actually matters is <code>target_frame_rate: -1</code>, which uncaps the frame rate. Leave
+        <code>time_scale</code> at <code>1</code> — see <a class="inl" href="#s7">step 7</a>.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 1 ─────────────────────────── -->
+    <section id="s1">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 1</div>
+        <h2>Scene skeleton</h2>
+      </div>
+
+      <p>One object owns the engine, the robot builder, and the RL clock for the whole scene.</p>
+
+      <ol class="steps">
+        <li>Create an empty GameObject at the scene root and name it <code>VoxelEngineManager</code>.</li>
+        <li>
+          Add these three components, in this order:
+          <ul class="bul">
+            <li><code>VoxelEngineCore</code> — loads the DLL, boots the C++ engine, indexes robots</li>
+            <li><code>VoxelRobotBuilder</code> — parses <code>.vox</code> files and sends the blueprint to C++</li>
+            <li><code>VoxelRLManager</code> — drives the lock-step decision cycle</li>
+          </ul>
+        </li>
+        <li>
+          On <strong>VoxelEngineCore</strong>, set <code>Dll Folder Path</code> to the folder holding your
+          built DLL, or use the editor menu <code>Voxel Engine ▸ Select DLL File</code>.
+        </li>
+        <li>
+          Tick <strong><code>Is Ml Agent</code></strong>. This one checkbox switches the scene between
+          training mode and plain physics-playback mode.
+        </li>
+      </ol>
+
+      <h3>VoxelRLManager timing</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="m">stepsPerSimulationCycle</td><td class="m">20</td>
+              <td>C++ micro-steps per cycle. 20 × 1&nbsp;ms = <strong>0.02&nbsp;s</strong>, i.e. 50&nbsp;Hz decisions.</td>
+            </tr>
+            <tr>
+              <td class="m">customDecisionPeriod</td><td class="m">1</td>
+              <td>Cycles per PPO decision. <code>1</code> means decide every cycle.</td>
+            </tr>
+            <tr>
+              <td class="m">actionSizePerRobot</td><td class="m">auto</td>
+              <td>Read-only. Derived from the Body Profile at startup — never type it in.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        50&nbsp;Hz is the standard rate for locomotion RL. For a robot with a ~2&nbsp;Hz gait that is
+        about 25 decisions per gait cycle, enough for the policy to shape a waveform rather than
+        flip a switch.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 2 ─────────────────────────── -->
+    <section id="s2">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 2</div>
+        <h2>Training area</h2>
+      </div>
+
+      <p>
+        Each robot trains in its own isolated arena. The project ships a prefab called
+        <code>TrainingAreaVox</code> — start from it rather than assembling one by hand.
+      </p>
+
+      <div class="tree">TrainingAreaVox                  <span class="dim">← VoxelPhysicsManager</span>
+├── Plane                        <span class="dim">floor</span>
+├── Cube / Sphere                <span class="dim">rigid obstacles (Rigidbody + Collider)</span>
+├── TargetCylinder               <span class="dim">the goal the robot chases</span>
+├── <span class="mark">VoxRobot_00</span>                   <span class="dim">← the RL robot</span>
+└── VoxRobot_01                  <span class="dim">companion, no agent</span></div>
+
+      <p>
+        <code>VoxelPhysicsManager</code> on the arena root relays rigid-body collisions between Unity
+        PhysX and the Voxelyze soft bodies, and hands out robot indices at startup.
+      </p>
+
+      <div class="note">
+        <span class="note-t">Companion</span>
+        <span>
+          <code>VoxRobot_01</code> is a small test body with <strong>no <code>VoxelRobotAgent</code></strong>.
+          It gets simulated but never receives actions — useful for checking multi-robot interaction.
+          Because it still occupies a simulation slot, an arena costs <strong>two</strong> robots in the
+          C++ thread budget, not one. That matters when you scale up.
+        </span>
+      </div>
+
+      <p>
+        Drag any interactive rigid bodies into the <code>Interactive Objects</code> array on
+        <code>VoxelPhysicsManager</code> so their collisions reach the soft body.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 3 ─────────────────────────── -->
+    <section id="s3">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 3</div>
+        <h2>Robot object</h2>
+      </div>
+
+      <p>Select <code>VoxRobot_00</code>. It carries five components:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Component</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td class="m">VoxelRobotInstance</td><td>Which <code>.vox</code> file to load, and how many inner OpenMP threads this robot gets</td></tr>
+            <tr><td class="m">VoxelPhysicsInfo</td><td>Zero-GC bridge to the C++ voxel state buffer</td></tr>
+            <tr><td class="m">VoxelGraphicRenderer</td><td>Draws the deforming mesh from the triple buffer</td></tr>
+            <tr><td class="m">VoxelRobotAgent</td><td>The ML-Agents agent. Thin — it delegates everything to the Task Profile</td></tr>
+            <tr><td class="m">BehaviorParameters</td><td>Added automatically with the agent</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Set <code>Selected Vox File Name</code> on <strong>VoxelRobotInstance</strong> to
+        <code>Test_V33_M33_All_Motor.vox</code>, and <code>threadCount</code> to <code>3</code>
+        for now.
+      </p>
+
+      <div class="note ok">
+        <span class="note-t">Leave alone</span>
+        <span>
+          <code>robotIdx</code> on the agent is assigned at runtime by <code>InitializeArea()</code>,
+          which numbers every robot sequentially across all arenas. Whatever value is serialized in the
+          prefab is overwritten. Don't try to set it by hand.
+        </span>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 4 ─────────────────────────── -->
+    <section id="s4">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 4</div>
+        <h2>Body Profile</h2>
+      </div>
+
+      <p>
+        The robot's <em>body</em> and its <em>task</em> are separate assets. A Body Profile describes
+        anatomy and is reusable across every task you write for that robot.
+      </p>
+
+      <p>
+        Create one with <code>Create ▸ RL Bodies ▸ Voxel Robot Body</code>. For the shipped
+        33-voxel robot:
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Value</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td class="m">expectedVoxelCount</td><td class="m">33</td><td>Voxels included in the observation</td></tr>
+            <tr><td class="m">muscleCount</td><td class="m">33</td><td>Actuated voxels — this <em>is</em> the action count</td></tr>
+            <tr><td class="m">centerVoxelIdx</td><td class="m">16</td><td>Kept for reference; the observation uses the centre of mass</td></tr>
+            <tr><td class="m">forwardVoxelA / B</td><td class="m">17 / 15</td><td>Voxel pair defining the local forward axis</td></tr>
+            <tr><td class="m">rightVoxelA / B</td><td class="m">21 / 11</td><td>Voxel pair defining the local right axis</td></tr>
+            <tr><td class="m">includeVoxelAngVel</td><td class="m">false</td><td>Off → 240 observations. On → 339</td></tr>
+            <tr><td class="m">targetDistScale</td><td class="m">5</td><td>Divisor that normalises target distance</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note stop">
+        <span class="note-t">Critical</span>
+        <span>
+          <code>muscleCount</code> must equal the number of <code>is_muscle</code> voxels in your
+          <code>.vox</code> file. Set it too low and the surplus muscles are never commanded — part of
+          the robot simply hangs limp, and nothing reports an error. The filename convention helps:
+          <code>V33_M33</code> means 33 voxels, 33 muscles.
+        </span>
+      </div>
+
+      <h3>What the observation contains</h3>
+
+      <p>
+        Everything is expressed in a body-local frame built from the two voxel pairs above, and
+        measured relative to the centre of mass — so the policy sees the same numbers wherever the
+        robot happens to be standing.
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Index</th><th>Contents</th><th>Count</th></tr></thead>
+          <tbody>
+            <tr><td class="m">0–2</td><td>Target direction (unit x, z) and normalised distance</td><td class="m">3</td></tr>
+            <tr><td class="m">3–5</td><td>Centre-of-mass velocity, local frame</td><td class="m">3</td></tr>
+            <tr><td class="m">6–8</td><td>Mean angular velocity, local frame</td><td class="m">3</td></tr>
+            <tr><td class="m">9–206</td><td>Per voxel: position and velocity relative to CoM</td><td class="m">6 × 33</td></tr>
+            <tr><td class="m">207–239</td><td>Previous action</td><td class="m">33</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        That last block matters more than it looks. The actuators have a first-order lag
+        (τ&nbsp;≈&nbsp;50&nbsp;ms), so what the robot does next depends on commands it received a few
+        steps ago. Feeding the previous action back in restores the Markov property — without it the
+        policy is guessing at hidden state.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 5 ─────────────────────────── -->
+    <section id="s5">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 5</div>
+        <h2>Task Profile</h2>
+      </div>
+
+      <p>
+        A Task Profile holds the objective: rewards, termination, episode length. Create one with
+        <code>Create ▸ RL Tasks ▸ Target Tracking</code>.
+      </p>
+
+      <ol class="steps">
+        <li>Drag your Body Profile into the <strong>Body</strong> slot.</li>
+        <li>Set <code>maxStep</code> to <code>500</code> — at 50&nbsp;Hz that is a <strong>10-second episode</strong>.</li>
+        <li>Leave <code>behaviorName</code> as <code>VoxBot33</code>; it must match the key in your training YAML.</li>
+        <li>Select <code>VoxRobot_00</code> and drag the Task Profile into the agent's <strong>Task Profile</strong> slot.</li>
+        <li>A <strong>Runtime State</strong> block appears. Drag the arena's <code>TargetCylinder</code> into <strong>Target Transform</strong>.</li>
+      </ol>
+
+      <h3>Reward shape</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Term</th><th>Value</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td class="m">distance</td><td class="m">2.0 × Δd</td><td>Every step. <code>d</code> is horizontal (XZ) distance to the target</td></tr>
+            <tr><td class="m">success</td><td class="m">+5.0</td><td>Within <code>0.2</code> of the target — episode ends</td></tr>
+            <tr><td class="m">fall / flip</td><td class="m">−1.0</td><td>CoM below <code>−2.0</code>, or the body's up axis inverts</td></tr>
+            <tr><td class="m">freeze</td><td class="m">−1.0</td><td>No movement for <code>125</code> steps (2.5&nbsp;s)</td></tr>
+            <tr><td class="m">time</td><td class="m">−1 / maxStep</td><td>Every surviving step, so dawdling costs</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <span class="note-t">Note</span>
+        <span>
+          Distance is measured in the horizontal plane only. Vertical distance is deliberately excluded —
+          otherwise the robot could earn reward by inflating upward toward a target floating above it,
+          and could never satisfy the reach threshold while standing under it.
+        </span>
+      </div>
+
+      <h3>How actions reach the muscles</h3>
+
+      <p>
+        The policy outputs one continuous value per muscle voxel in <code>[-1, +1]</code>. That maps
+        linearly to a voxel temperature, which drives thermal expansion or contraction:
+      </p>
+
+      <div class="tscale">
+        <div class="tscale-bar"></div>
+        <div class="tscale-ticks">
+          <span>−1.0 → −12 °&nbsp;&nbsp;contract</span>
+          <span>0 → neutral</span>
+          <span>+1.0 → +12 °&nbsp;&nbsp;expand</span>
+        </div>
+      </div>
+
+      <p>
+        The C++ side does not apply that target instantly. Each 1&nbsp;ms micro-step moves the current
+        temperature 2&nbsp;% of the way toward it, giving a first-order actuator with
+        τ&nbsp;≈&nbsp;49.5&nbsp;ms. That is what keeps a jumpy policy from exploding the mass-spring
+        solver — and it is why the previous action belongs in the observation.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 6 ─────────────────────────── -->
+    <section id="s6">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 6</div>
+        <h2>Check the numbers</h2>
+      </div>
+
+      <p>
+        Observation and action sizes are <strong>derived</strong>, not typed. The agent pushes them into
+        <code>BehaviorParameters</code> from the profiles. Your job is to confirm they landed.
+      </p>
+
+      <p>Open <strong>Behavior Parameters</strong> on <code>VoxRobot_00</code> and verify:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Expected</th></tr></thead>
+          <tbody>
+            <tr><td>Vector Observation ▸ Space Size</td><td class="m">240</td></tr>
+            <tr><td>Vector Observation ▸ Stacked Vectors</td><td class="m">1</td></tr>
+            <tr><td>Actions ▸ Continuous Actions</td><td class="m">33</td></tr>
+            <tr><td>Behavior Name</td><td class="m">VoxBot33</td></tr>
+            <tr><td>Decision Requester component</td><td class="m">absent</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note warn">
+        <span class="note-t">Prefab</span>
+        <span>
+          If your robots are prefab instances, fix these on the <strong>prefab</strong>, not on one
+          instance. ML-Agents builds the vector sensor from the serialized value before
+          <code>Initialize()</code> runs, so a stale prefab value can win. Touch the Task Profile asset
+          in Prefab Mode to trigger the sync, then save the prefab.
+        </span>
+      </div>
+
+      <p>
+        Where 240 comes from: <code>9 + 6 × 33</code> for the body state, plus <code>33</code> for the
+        previous action. Turn on <code>includeVoxelAngVel</code> and it becomes
+        <code>9 + 9 × 33 + 33 = 339</code>. Either is fine — but a trained model is tied to whichever
+        you used.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 7 ─────────────────────────── -->
+    <section id="s7">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 7</div>
+        <h2>Training config</h2>
+      </div>
+
+      <p>Save this as <code>VoxBot33.yaml</code>. The behavior key must match <code>behaviorName</code>.</p>
+
+<pre><code>behaviors:
+  VoxBot33:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 0.0003
+      beta: 0.005
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: true          <span class="cm"># essential — raw voxel units vary in scale</span>
+      hidden_units: 512
+      num_layers: 3
+    reward_signals:
+      extrinsic:
+        gamma: 0.995           <span class="cm"># 200-step horizon ≈ 4 s of the 10 s episode</span>
+        strength: 1.0
+    keep_checkpoints: 5
+    checkpoint_interval: 500000
+    max_steps: 10000000
+    time_horizon: 256          <span class="cm"># ≥ maxStep, so each episode is one trajectory</span>
+    summary_freq: 10000
+
+<span class="hl">engine_settings:</span>             <span class="cm"># top level — NOT nested under the behavior</span>
+  time_scale: 1
+  target_frame_rate: -1
+  no_graphics: false
+  quality_level: 0</code></pre>
+
+      <div class="note stop">
+        <span class="note-t">Indent</span>
+        <span>
+          <code>engine_settings</code> sits at column 0, a sibling of <code>behaviors</code>. Nest it
+          under <code>VoxBot33</code> and ML-Agents aborts with
+          <code>The option engine_settings … is invalid</code>.
+        </span>
+      </div>
+
+      <p>
+        <code>max_steps</code> counts agent steps <strong>summed across every robot</strong>. With four
+        robots, 10&nbsp;M total is 2.5&nbsp;M per robot — worth remembering when reading TensorBoard.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── STEP 8 ─────────────────────────── -->
+    <section id="s8">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Step 8</div>
+        <h2>Run it</h2>
+      </div>
+
+      <ol class="steps">
+        <li>
+          In your Python environment:
+<pre><code>mlagents-learn config/VoxBot33.yaml --run-id=VoxBot_01</code></pre>
+        </li>
+        <li>Wait for <code>Listening on port 5004</code>, then press <strong>Play</strong> in Unity.</li>
+        <li>
+          Watch the console. These two lines tell you the wiring is correct:
+<pre><code>[VoxelEngineCore] Total 2 robots indexed sequentially across 1 training areas.
+[VoxelRLManager] 1 robots, actionSize=33</code></pre>
+        </li>
+      </ol>
+
+      <p>
+        Two robots indexed, one RL robot — the second is the companion. If <em>both</em> show as RL
+        robots, the companion has an agent component on it that should not be there.
+      </p>
+
+      <h3>First ten minutes on TensorBoard</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Metric</th><th>Healthy</th><th>If not</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="m">Cumulative Reward</td><td>Noisy but moving</td>
+              <td>Flat at zero → actions aren't reaching the muscles</td>
+            </tr>
+            <tr>
+              <td class="m">Episode Length</td><td>Near 500</td>
+              <td>Consistently short → freeze or flip detection firing too eagerly</td>
+            </tr>
+            <tr>
+              <td class="m">Policy/Entropy</td><td>Gently falling</td>
+              <td>Flat → nothing is being learned; cliff → premature convergence</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note ok">
+        <span class="note-t">Tip</span>
+        <span>
+          Before training, test the wiring by hand. Set Behavior Type to <strong>Heuristic Only</strong>
+          and hold <kbd>A</kbd> or <kbd>D</kbd> — the built-in heuristic drives each muscle with a
+          phase-shifted sine, so the robot should visibly crawl. If it only puffs up uniformly or does
+          nothing, fix that before you spend GPU hours.
+        </span>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── SCALING ────────────────────────── -->
+    <section id="scale">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Going wider</div>
+        <h2>Scaling up</h2>
+      </div>
+
+      <p>
+        Three scenes ship with the project. More arenas collect experience faster and give PPO a more
+        decorrelated batch.
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Scene</th><th>Arenas</th><th>Sim robots</th><th>Outer threads</th></tr></thead>
+          <tbody>
+            <tr><td class="m">SingleArenaScene</td><td class="m">1</td><td class="m">2</td><td class="m">2</td></tr>
+            <tr><td class="m">MultiArenaScene04</td><td class="m">4</td><td class="m">8</td><td class="m">8</td></tr>
+            <tr><td class="m">MultiArenaScene16</td><td class="m">16</td><td class="m">32</td><td class="m">32</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note warn">
+        <span class="note-t">Threads</span>
+        <span>
+          Total threads = <strong>robots × per-robot <code>threadCount</code></strong>. With 16 arenas and
+          <code>threadCount: 3</code> on the RL robot you are at 64 threads before Unity's own. Oversubscribe
+          a 64-core machine and 16 arenas will run <em>slower</em> than 4. Drop
+          <code>threadCount</code> to 2 in the 16-arena scene.
+        </span>
+      </div>
+
+      <p>
+        <strong>Keep the YAML identical across scenes.</strong> <code>buffer_size</code> counts total agent
+        steps, so the number of policy updates at a given step count is the same either way — which is
+        exactly what makes a 4-vs-16 comparison meaningful. Changing hyperparameters at the same time
+        confounds the result.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── BUILD ──────────────────────────── -->
+    <section id="build">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Optional</div>
+        <h2>Standalone builds</h2>
+      </div>
+
+      <p>
+        Training against a built player is faster than the editor. Open
+        <code>VoxUnityML ▸ Auto Build (Client &amp; Server)</code>, pick a scene, and press the button —
+        it produces a graphics build and a headless server build in one pass.
+      </p>
+
+<pre><code>VoxUnityML_Auto_Builds/
+└── MultiArenaScene04/
+    ├── GraphicMode/VoxelSim_Graphics.exe
+    └── ServerMode/VoxelSim_Server.exe</code></pre>
+
+      <p>
+        Point the trainer at one with <code>--env</code>:
+      </p>
+
+<pre><code>mlagents-learn config/VoxBot33.yaml --run-id=VoxBot_02 \
+  --env=../VoxUnityML_Auto_Builds/MultiArenaScene04/ServerMode/VoxelSim_Server.exe</code></pre>
+
+      <p>
+        Only then does <code>no_graphics</code> in the YAML do anything — in the editor it is ignored.
+        Everything else comes from your current Player Settings and the Build Profiles checkboxes.
+      </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── TROUBLE ────────────────────────── -->
+    <section id="trouble">
+      <div class="sec-head">
+        <div class="sec-eyebrow">When it breaks</div>
+        <h2>Troubleshooting</h2>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Failed to load PlayerSettings (internal index #0)</div>
+        <div class="tsq-a">
+          The build folder holds files from two different builds. Delete the output folder entirely and
+          rebuild — Unity never cleans it for you. The bundled AutoBuilder now does this automatically.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">The option engine_settings … is invalid</div>
+        <div class="tsq-a">
+          <code>engine_settings</code> is indented under the behavior. Move it to column 0, level with
+          <code>behaviors</code>.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Observation size mismatch</div>
+        <div class="tsq-a">
+          <code>BehaviorParameters</code> disagrees with what <code>CollectObservations</code> writes.
+          Nearly always a stale prefab value — see <a class="inl" href="#s6">step 6</a>. Confirm 240
+          (or 339 with angular velocity on).
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Only part of the robot moves</div>
+        <div class="tsq-a">
+          <code>muscleCount</code> is smaller than the real number of muscle voxels. Voxels beyond the
+          count keep a target of zero forever. Check it against the <code>.vox</code> file.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Nothing moves at all, and training never starts</div>
+        <div class="tsq-a">
+          The lock-step is stalled. <code>VoxelRLManager</code> waits for <em>every</em> agent to submit
+          before stepping C++, so one agent with a missing Task Profile or a null manager reference
+          freezes the whole scene. Check the console count matches the arenas you expect.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Robot explodes or twitches violently</div>
+        <div class="tsq-a">
+          Lower <code>TEMP_MAX</code> in <code>Apply_RL_Actions_To_Motors_Direct_Temperature_Control</code>
+          from 12 to 6–8 and rebuild the DLL. Early in training the policy is nearly random, and
+          neighbouring voxels pulling in opposite directions is the worst case for a mass-spring solver.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Episodes end almost immediately</div>
+        <div class="tsq-a">
+          Flip detection is working, possibly too well. It compares the body's up axis against world up;
+          soften it by requiring a deeper tilt, or raise <code>freezeStepLimit</code> if the freeze check
+          is the one firing.
+        </div>
+      </div>
+    </section>
+
+  </article>
 </div>
-
 </body>
 </html>
