@@ -15,7 +15,6 @@
   --rule: #CBD2DE;
   --rule-soft: #DFE4EC;
   --ink: #14181F;
-  --ink-soft: #56607180;
   --muted: #5A6475;
 
   --cold: #1F5FA8;
@@ -227,8 +226,6 @@ h1 {
 .rail-gap { height: 12px; }
 
 /* ── ARTICLE ────────────────────────────────── */
-/* The column runs wide so tables, code and figures get room.
-   Running prose is capped separately to a readable measure. */
 article { padding-top: 44px; max-width: 880px; }
 
 p, ol.steps, ul.bul, .note, figcaption, .tsq-a { max-width: 68ch; }
@@ -264,9 +261,6 @@ a.inl { color: var(--cold); text-decoration: underline; text-underline-offset: 2
 
 strong { font-weight: 600; }
 
-/* lists — markers are absolutely positioned so each <li> stays a normal
-   block box. A grid or flex <li> would turn every inline <code> and
-   <strong> into its own grid item and shred the sentence. */
 ol.steps, ul.bul {
   padding-left: 0;
   list-style: none;
@@ -392,6 +386,7 @@ th {
 td { padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
 tbody tr:last-child td { border-bottom: none; }
 td.m { font-family: 'Source Code Pro', monospace; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.mw { font-family: 'Source Code Pro', monospace; font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* figure */
 figure { margin-bottom: 18px; }
@@ -457,13 +452,14 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
   <div class="masthead-in">
     <div class="brandline">
       <span class="brand">VoxUnityML</span>
-      <span class="ver">v0.9</span>
+      <span class="ver">v1.1</span>
+      <span class="ver">Vox33 walkthrough</span>
     </div>
     <h1>First Training Run</h1>
     <p class="standfirst">
       Set up a Voxelyze soft-body robot in Unity, wire it to ML-Agents, and start a PPO run.
-      This guide assumes you have never opened the project before and walks through one
-      working scene end to end.
+      This guide assumes you have never opened the project before. It walks through one working
+      scene end to end using the 33-voxel robot, then tells you what changes for bigger bodies.
     </p>
 
     <div class="specs">
@@ -492,6 +488,7 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
   <nav class="rail" aria-label="Steps">
     <div class="rail-h">Contents</div>
     <a href="#prereq"><span class="rail-n">·</span><span>Before you start</span></a>
+    <a href="#units"><span class="rail-n">·</span><span>Two length units</span></a>
     <a href="#loop"><span class="rail-n">·</span><span>How the loop works</span></a>
     <div class="rail-gap"></div>
     <a href="#s1"><span class="rail-n">1</span><span>Scene skeleton</span></a>
@@ -503,9 +500,14 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
     <a href="#s7"><span class="rail-n">7</span><span>Training config</span></a>
     <a href="#s8"><span class="rail-n">8</span><span>Run it</span></a>
     <div class="rail-gap"></div>
-    <a href="#scale"><span class="rail-n">·</span><span>Scaling up</span></a>
+    <a href="#fps"><span class="rail-n">·</span><span>Modes &amp; frame rate</span></a>
+    <a href="#scale"><span class="rail-n">·</span><span>Sizing for your CPU</span></a>
+    <a href="#machines"><span class="rail-n">·</span><span>Machine recipes</span></a>
+    <a href="#affinity"><span class="rail-n">·</span><span>Reading the core map</span></a>
     <a href="#build"><span class="rail-n">·</span><span>Standalone builds</span></a>
+    <a href="#silent"><span class="rail-n">·</span><span>Silent failures</span></a>
     <a href="#trouble"><span class="rail-n">·</span><span>Troubleshooting</span></a>
+    <a href="#vox516"><span class="rail-n">·</span><span>Appendix: Vox516</span></a>
   </nav>
 
   <article>
@@ -520,13 +522,109 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       <ul class="bul">
         <li><strong>Unity 6</strong> with Windows Build Support. The project targets <code>StandaloneWindows64</code>.</li>
         <li><strong>ML-Agents</strong> Unity package installed, plus the matching Python package in a conda or venv environment.</li>
-        <li><strong>The compiled Voxelyze DLL.</strong> Build the C++ solution first — Unity loads it through <code>VoxelDllConfig.DLL_NAME</code>. Nothing in this guide works without it.</li>
-        <li><strong>A <code>.vox</code> robot file</strong> in <code>StreamingAssets</code>. This guide uses <code>Test_V33_M33_All_Motor.vox</code> — 33 voxels, all of them muscle.</li>
+        <li><strong>The compiled Voxelyze DLL.</strong> Build the C++ solution first. Unity loads it by the name in
+            <code>VoxelDllConfig.DLL_NAME</code>, which ships as <code>NeuronomicoN_DLL_x64_Release</code>. Nothing in this guide
+            works without it.</li>
+        <li><strong>A <code>.vox</code> robot file</strong> in <code>StreamingAssets</code>. This guide uses
+            <code>Test_V33_M33_All_Motor.vox</code> — 33 voxels, all of them muscle.</li>
       </ul>
+
+      <p>
+        Every component, asset and menu named below already exists in the project. You are wiring
+        existing pieces together, not writing code.
+      </p>
 
       <div class="note warn">
         <span class="note-t">Rebuild</span>
-        <span>If you change any C++ source, rebuild the DLL <em>and</em> copy it into the Unity project. Editing the source alone leaves the old binary loaded, and the symptoms look like Unity bugs rather than a stale DLL.</span>
+        <span>If you change any C++ source, rebuild the DLL <em>and</em> make sure the folder Unity points at holds the
+        new binary. Editing the source alone leaves the old DLL loaded, and the symptoms look like Unity bugs rather
+        than a stale DLL.</span>
+      </div>
+
+      <div class="note stop">
+        <span class="note-t">Silent serial</span>
+        <span>
+          If you build the DLL with <strong>clang-cl</strong> (the <code>ReleaseCL</code> configuration), the OpenMP flag is
+          <code>/openmp</code> — <em>not</em> <code>-fopenmp</code>. clang-cl discards <code>-fopenmp</code> as an unknown
+          argument, and clang then ignores every <code>#pragma omp</code> without a single warning: the build succeeds and
+          you get a <strong>completely serial DLL</strong> that looks like a Unity performance problem. That configuration
+          also needs <code>libomp.lib</code> linked and <code>libomp.dll</code> beside the output. A compile-time guard in
+          <code>VoxOmpCompat.h</code> now fails the build when <code>_OPENMP</code> is undefined, and the boot line
+          <code>rt=libomp(clang)</code> or <code>rt=vcomp(MSVC)</code> tells you which runtime is actually live.
+        </span>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── UNITS ──────────────────────────── -->
+    <section id="units">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Read this first</div>
+        <h2>Two length units live in this project</h2>
+      </div>
+
+      <p>
+        This is the single most common source of silent, hard-to-find mistakes, and it is worth two
+        minutes before you touch anything. The C++ engine works in its own <strong>sim units</strong>.
+        Unity displays the robot ten times larger.
+      </p>
+
+      <figure>
+        <svg viewBox="0 0 780 132" role="img"
+             aria-label="A value of 0.03 in simulation units corresponds to 0.3 metres in Unity world space; the conversion factor is ten.">
+          <defs>
+            <marker id="ah2" viewBox="0 0 10 8" refX="9" refY="4"
+                    markerWidth="8" markerHeight="7" orient="auto-start-reverse">
+              <polygon points="0,0 10,4 0,8" fill="currentColor"/>
+            </marker>
+          </defs>
+
+          <rect x="40"  y="30" width="230" height="58" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+          <rect x="500" y="30" width="230" height="58" rx="4" fill="none" stroke="#C05314" stroke-width="2"/>
+
+          <text x="155" y="55" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">sim units (C++ / DLL)</text>
+          <text x="155" y="75" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">voxel pos, CoM, thresholds</text>
+
+          <text x="615" y="55" text-anchor="middle" font-size="13" font-weight="600" fill="#C05314">Unity metres (world)</text>
+          <text x="615" y="75" text-anchor="middle" font-size="11.5" fill="#C05314" opacity=".8">Transform positions, spawn radii</text>
+
+          <line x1="272" y1="59" x2="496" y2="59" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah2)"/>
+          <text x="384" y="48" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">× 10</text>
+          <text x="384" y="80" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">renderer localScale, forced at runtime</text>
+        </svg>
+        <figcaption>
+          <code>VoxelGraphicRenderer</code> forces <code>transform.localScale = (10, 10, 10)</code> at runtime, and
+          <code>VoxelPhysicsManager.simScale</code> (default <code>10</code>) applies the same factor to PhysX interaction.
+          The prefab shows a scale of 1; the running scene does not.
+        </figcaption>
+      </figure>
+
+      <h3>Which side is a given number on?</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Quantity</th><th>Unit</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td class="mw">Voxel <code>pos</code>, <code>vel</code> from the DLL</td><td class="m">sim</td><td>Straight out of the C++ state buffer</td></tr>
+            <tr><td class="mw">Centre of mass, <code>previousDistance</code></td><td class="m">sim</td><td>Averaged from those voxels</td></tr>
+            <tr><td class="mw"><code>InverseTransformPoint(target.position)</code></td><td class="m">sim</td><td>The runtime scale of 10 already divides it</td></tr>
+            <tr><td class="mw"><code>targetReachThreshold</code>, fall height, <code>targetDistScale</code></td><td class="m">sim</td><td>Compared against the values above</td></tr>
+            <tr><td class="mw"><code>minSpawnDist</code> / <code>maxSpawnDist</code></td><td class="m">Unity</td><td>Assigned to <code>Transform.localPosition</code> directly</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note stop">
+        <span class="note-t">Why it bites</span>
+        <span>
+          A threshold of <code>0.2</code> looks like 20&nbsp;cm and is in fact <strong>2&nbsp;metres</strong>. With targets
+          spawning 2.5–3.5&nbsp;m away, the robot is declared a winner after covering a third of the distance, and the
+          policy learns nothing useful. The same arithmetic made an early fall check of <code>−2.0</code> mean
+          <strong>−20&nbsp;m</strong>, a condition that never once fired. Both are fixed in the shipped assets — the values
+          in <a class="inl" href="#s5">step 5</a> are the correct ones. Whenever you add a constant, write the unit in a
+          comment next to it.
+        </span>
       </div>
     </section>
 
@@ -548,7 +646,8 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         Physics runs on a <strong>background C++ thread</strong>, asynchronously. Unity cannot simply
         step the Academy on a fixed schedule and hope the physics kept up — it has to wait for the
         worker to finish, then hand over the next batch of actions. So <code>VoxelRLManager</code>
-        disables automatic stepping and drives the whole cycle by hand from <code>Update()</code>.
+        sets <code>Academy.Instance.AutomaticSteppingEnabled = false</code> and drives the whole cycle
+        by hand from <code>Update()</code>.
       </p>
 
       <figure>
@@ -561,13 +660,11 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
             </marker>
           </defs>
 
-          <!-- boxes -->
           <rect x="24"  y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
           <rect x="220" y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
           <rect x="416" y="44" width="140" height="64" rx="4" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
           <rect x="612" y="44" width="140" height="64" rx="4" fill="none" stroke="#C05314" stroke-width="2"/>
 
-          <!-- box labels -->
           <text x="94"  y="70" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Unity Update()</text>
           <text x="94"  y="89" text-anchor="middle" font-size="11.5" fill="currentColor" opacity=".65">polls ready flag</text>
 
@@ -580,7 +677,6 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
           <text x="682" y="70" text-anchor="middle" font-size="13" font-weight="600" fill="#C05314">C++ worker thread</text>
           <text x="682" y="89" text-anchor="middle" font-size="11.5" fill="#C05314" opacity=".8">20 × 1 ms steps</text>
 
-          <!-- arrows -->
           <line x1="164" y1="76" x2="214" y2="76" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
           <text x="189" y="66" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">ready</text>
 
@@ -590,7 +686,6 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
           <line x1="556" y1="76" x2="606" y2="76" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
           <text x="581" y="66" text-anchor="middle" font-size="11" fill="currentColor" opacity=".7">all N in</text>
 
-          <!-- return path -->
           <path d="M 682 108 L 682 166 L 94 166 L 94 112" fill="none" stroke="#C05314"
                 stroke-width="1.6" marker-end="url(#ah)" color="#C05314"/>
           <text x="388" y="185" text-anchor="middle" font-size="11.5" fill="#C05314">
@@ -613,13 +708,22 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         </span>
       </div>
 
+      <h3>The first 1.5 seconds</h3>
+      <p>
+        <code>VoxelRLManager</code> waits 1.5&nbsp;s of <em>unscaled</em> real time before the first decision,
+        so the Python socket has time to settle, then logs
+        <code>Python connection stabilized ready!</code>. A scene that sits still for a second and a half
+        at the start of play is behaving correctly.
+      </p>
+
       <h3>Why <code>time_scale</code> barely helps here</h3>
       <p>
         In a stock ML-Agents project the Academy steps from <code>FixedUpdate</code>, so raising
         <code>time_scale</code> multiplies throughput. This project steps from <code>Update()</code>,
         which fires <strong>once per rendered frame</strong> regardless of time scale. The knob that
         actually matters is <code>target_frame_rate: -1</code>, which uncaps the frame rate. Leave
-        <code>time_scale</code> at <code>1</code> — see <a class="inl" href="#s7">step 7</a>.
+        <code>time_scale</code> at <code>1</code> — see <a class="inl" href="#s7">step 7</a> and
+        <a class="inl" href="#fps">Modes &amp; frame rate</a>.
       </p>
     </section>
 
@@ -632,7 +736,11 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <h2>Scene skeleton</h2>
       </div>
 
-      <p>One object owns the engine, the robot builder, and the RL clock for the whole scene.</p>
+      <p>
+        One object owns the engine, the robot builder, and the RL clock for the whole scene. If you open
+        <code>SingleArenaScene</code> it is already there, named <code>VoxelEngineManager</code> — open it
+        and read along rather than building a new one.
+      </p>
 
       <ol class="steps">
         <li>Create an empty GameObject at the scene root and name it <code>VoxelEngineManager</code>.</li>
@@ -645,14 +753,21 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
           </ul>
         </li>
         <li>
-          On <strong>VoxelEngineCore</strong>, set <code>Dll Folder Path</code> to the folder holding your
-          built DLL, or use the editor menu <code>Voxel Engine ▸ Select DLL File</code>.
+          On <strong>VoxelEngineCore</strong>, click the <strong><code>DLL-Dir</code></strong> button next to
+          <code>DLL Path</code> and pick the folder holding your built DLL. The path field is read-only by design;
+          the button is how you set it.
         </li>
         <li>
           Tick <strong><code>Is Ml Agent</code></strong>. This one checkbox switches the scene between
-          training mode and plain physics-playback mode.
+          training mode and plain physics-playback mode, and it enables or disables every
+          <code>Agent</code> and <code>BehaviorParameters</code> in the scene for you.
         </li>
       </ol>
+
+      <p>
+        <code>Active Dll Name</code>, <code>Num Robots</code>, <code>Voxel Parse Kind</code> and
+        <code>Max Num Oscillators</code> are read-only readouts. They fill themselves in; you never type into them.
+      </p>
 
       <h3>VoxelRLManager timing</h3>
 
@@ -666,11 +781,11 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
             </tr>
             <tr>
               <td class="m">customDecisionPeriod</td><td class="m">1</td>
-              <td>Cycles per PPO decision. <code>1</code> means decide every cycle.</td>
+              <td>Cycles per PPO decision. <code>1</code> means decide every cycle. Raise it and physics keeps running on the previous action.</td>
             </tr>
             <tr>
               <td class="m">actionSizePerRobot</td><td class="m">auto</td>
-              <td>Read-only. Derived from the Body Profile at startup — never type it in.</td>
+              <td>Read-only. Taken from the first agent's Task Profile at startup — never type it in.</td>
             </tr>
           </tbody>
         </table>
@@ -681,6 +796,16 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         about 25 decisions per gait cycle, enough for the policy to shape a waveform rather than
         flip a switch.
       </p>
+
+      <div class="note ok">
+        <span class="note-t">Order</span>
+        <span>
+          Set <code>VoxelEngineCore</code> to <strong>−1000</strong> in
+          <code>Project Settings ▸ Script Execution Order</code>. It makes the DLL path and the console hook land
+          before anything else initialises, which matters for standalone builds — see
+          <a class="inl" href="#trouble">Troubleshooting</a>.
+        </span>
+      </div>
     </section>
 
     <hr class="div">
@@ -706,7 +831,9 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
 
       <p>
         <code>VoxelPhysicsManager</code> on the arena root relays rigid-body collisions between Unity
-        PhysX and the Voxelyze soft bodies, and hands out robot indices at startup.
+        PhysX and the Voxelyze soft bodies, and hands out robot indices at startup through
+        <code>InitializeArea()</code>. Its <code>simScale</code> must stay at <code>10</code>, matching the
+        renderer — see <a class="inl" href="#units">Two length units</a>.
       </p>
 
       <div class="note">
@@ -749,11 +876,23 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         </table>
       </div>
 
-      <p>
-        Set <code>Selected Vox File Name</code> on <strong>VoxelRobotInstance</strong> to
-        <code>Test_V33_M33_All_Motor.vox</code>, and <code>threadCount</code> to <code>3</code>
-        for now.
-      </p>
+      <p>On <strong>VoxelRobotInstance</strong>:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Value</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="m">Voxel File</td><td class="m">Test_V33_M33_All_Motor.vox</td>
+                <td>A dropdown at the bottom of the inspector, listing every <code>.vox</code> in <code>StreamingAssets</code>. Pick from it — do not type a filename.</td></tr>
+            <tr><td class="m">threadCount</td><td class="m">3</td>
+                <td>Inner OpenMP threads for this robot. See <a class="inl" href="#scale">Sizing for your CPU</a> before raising it.</td></tr>
+            <tr><td class="m">isUnityBuild</td><td class="m">true</td>
+                <td>Checked: Unity's builder sends the blueprint. Unchecked: C++ loads its own internal file.</td></tr>
+            <tr><td class="m">robotIndex</td><td class="m">auto</td>
+                <td>Read-only, assigned at startup.</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <div class="note ok">
         <span class="note-t">Leave alone</span>
@@ -776,25 +915,23 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
 
       <p>
         The robot's <em>body</em> and its <em>task</em> are separate assets. A Body Profile describes
-        anatomy and is reusable across every task you write for that robot.
-      </p>
-
-      <p>
-        Create one with <code>Create ▸ RL Bodies ▸ Voxel Robot Body</code>. For the shipped
-        33-voxel robot:
+        anatomy and is reusable across every task you write for that robot. The project ships
+        <code>RobotBody_Vox33</code> — use it, or create your own with
+        <code>Create ▸ RL Bodies ▸ Voxel Robot Body</code>.
       </p>
 
       <div class="tw">
         <table>
-          <thead><tr><th>Field</th><th>Value</th><th>Meaning</th></tr></thead>
+          <thead><tr><th>Field</th><th>Vox33</th><th>Meaning</th></tr></thead>
           <tbody>
-            <tr><td class="m">expectedVoxelCount</td><td class="m">33</td><td>Voxels included in the observation</td></tr>
+            <tr><td class="m">expectedVoxelCount</td><td class="m">33</td><td>Voxels in the body. Also the basis for centre of mass</td></tr>
             <tr><td class="m">muscleCount</td><td class="m">33</td><td>Actuated voxels — this <em>is</em> the action count</td></tr>
             <tr><td class="m">centerVoxelIdx</td><td class="m">16</td><td>Kept for reference; the observation uses the centre of mass</td></tr>
             <tr><td class="m">forwardVoxelA / B</td><td class="m">17 / 15</td><td>Voxel pair defining the local forward axis</td></tr>
             <tr><td class="m">rightVoxelA / B</td><td class="m">21 / 11</td><td>Voxel pair defining the local right axis</td></tr>
-            <tr><td class="m">includeVoxelAngVel</td><td class="m">false</td><td>Off → 240 observations. On → 339</td></tr>
-            <tr><td class="m">targetDistScale</td><td class="m">5</td><td>Divisor that normalises target distance</td></tr>
+            <tr><td class="m">includeVoxelAngVel</td><td class="m">false</td><td>Off → 6 floats per voxel. On → 9</td></tr>
+            <tr><td class="m">targetDistScale</td><td class="m">0.5</td><td><strong>sim units.</strong> Divisor normalising target distance; roughly your max spawn radius</td></tr>
+            <tr><td class="m">observedVoxelIndices</td><td class="m">empty</td><td>Empty → observe all voxels. Filled → observe only those. Leave empty for Vox33</td></tr>
           </tbody>
         </table>
       </div>
@@ -821,10 +958,10 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <table>
           <thead><tr><th>Index</th><th>Contents</th><th>Count</th></tr></thead>
           <tbody>
-            <tr><td class="m">0–2</td><td>Target direction (unit x, z) and normalised distance</td><td class="m">3</td></tr>
+            <tr><td class="m">0–2</td><td>Target direction in the horizontal plane (unit x, z) and distance / <code>targetDistScale</code>, clipped at 2</td><td class="m">3</td></tr>
             <tr><td class="m">3–5</td><td>Centre-of-mass velocity, local frame</td><td class="m">3</td></tr>
             <tr><td class="m">6–8</td><td>Mean angular velocity, local frame</td><td class="m">3</td></tr>
-            <tr><td class="m">9–206</td><td>Per voxel: position and velocity relative to CoM</td><td class="m">6 × 33</td></tr>
+            <tr><td class="m">9–206</td><td>Per observed voxel: position and velocity relative to CoM</td><td class="m">6 × 33</td></tr>
             <tr><td class="m">207–239</td><td>Previous action</td><td class="m">33</td></tr>
           </tbody>
         </table>
@@ -834,8 +971,18 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         That last block matters more than it looks. The actuators have a first-order lag
         (τ&nbsp;≈&nbsp;50&nbsp;ms), so what the robot does next depends on commands it received a few
         steps ago. Feeding the previous action back in restores the Markov property — without it the
-        policy is guessing at hidden state.
+        policy is guessing at hidden state. <code>AddActuatorObservations()</code> appends it for you;
+        any custom task profile must call it last.
       </p>
+
+      <div class="note">
+        <span class="note-t">Subset</span>
+        <span>
+          <code>observedVoxelIndices</code> exists for bodies with large rigid regions, where most voxels
+          carry no information but still get amplified by <code>normalize: true</code>. Vox33 is all muscle,
+          so leave it empty. The appendix shows why a 516-voxel body needs it.
+        </span>
+      </div>
     </section>
 
     <hr class="div">
@@ -848,7 +995,8 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       </div>
 
       <p>
-        A Task Profile holds the objective: rewards, termination, episode length. Create one with
+        A Task Profile holds the objective: rewards, termination, episode length. The shipped one is
+        <code>TargetTracking_Vox33</code>; new ones come from
         <code>Create ▸ RL Tasks ▸ Target Tracking</code>.
       </p>
 
@@ -857,8 +1005,34 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <li>Set <code>maxStep</code> to <code>500</code> — at 50&nbsp;Hz that is a <strong>10-second episode</strong>.</li>
         <li>Leave <code>behaviorName</code> as <code>VoxBot33</code>; it must match the key in your training YAML.</li>
         <li>Select <code>VoxRobot_00</code> and drag the Task Profile into the agent's <strong>Task Profile</strong> slot.</li>
-        <li>A <strong>Runtime State</strong> block appears. Drag the arena's <code>TargetCylinder</code> into <strong>Target Transform</strong>.</li>
+        <li>A <strong>Runtime State</strong> block appears on the agent. Drag the arena's <code>TargetCylinder</code> into <strong>Target Transform</strong>.</li>
       </ol>
+
+      <div class="note warn">
+        <span class="note-t">Per instance</span>
+        <span>
+          <strong>Target Transform</strong> lives on the agent's runtime state, not on the shared asset. Every arena
+          you duplicate needs its own target dragged in. A null slot skips the entire distance-reward block with no
+          error — the run simply never learns.
+        </span>
+      </div>
+
+      <h3>Task parameters</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Vox33</th><th>Unit</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td class="m">minSpawnDist / maxSpawnDist</td><td class="m">2.5 / 3.5</td><td class="m">Unity</td><td>Target respawns on a random ring around the arena each episode</td></tr>
+            <tr><td class="m">targetReachThreshold</td><td class="m">0.03</td><td class="m">sim</td><td>= 0.3&nbsp;m in world space</td></tr>
+            <tr><td class="m">distanceRewardMultiplier</td><td class="m">20</td><td class="m">—</td><td>Scales progress made in sim units back to a usable reward</td></tr>
+            <tr><td class="m">successReward</td><td class="m">5</td><td class="m">—</td><td>Paid once on arrival</td></tr>
+            <tr><td class="m">failPenalty</td><td class="m">−1</td><td class="m">—</td><td>Freeze, fall or flip</td></tr>
+            <tr><td class="m">freezeStepLimit</td><td class="m">125</td><td class="m">steps</td><td>2.5&nbsp;s at 50&nbsp;Hz</td></tr>
+            <tr><td class="m">maxStep</td><td class="m">500</td><td class="m">steps</td><td>10&nbsp;s episode</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <h3>Reward shape</h3>
 
@@ -866,11 +1040,11 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <table>
           <thead><tr><th>Term</th><th>Value</th><th>When</th></tr></thead>
           <tbody>
-            <tr><td class="m">distance</td><td class="m">2.0 × Δd</td><td>Every step. <code>d</code> is horizontal (XZ) distance to the target</td></tr>
-            <tr><td class="m">success</td><td class="m">+5.0</td><td>Within <code>0.2</code> of the target — episode ends</td></tr>
-            <tr><td class="m">fall / flip</td><td class="m">−1.0</td><td>CoM below <code>−2.0</code>, or the body's up axis inverts</td></tr>
-            <tr><td class="m">freeze</td><td class="m">−1.0</td><td>No movement for <code>125</code> steps (2.5&nbsp;s)</td></tr>
-            <tr><td class="m">time</td><td class="m">−1 / maxStep</td><td>Every surviving step, so dawdling costs</td></tr>
+            <tr><td class="m">distance</td><td class="m">20 × Δd</td><td>Every step. <code>d</code> is horizontal (XZ) distance to the target, in sim units</td></tr>
+            <tr><td class="m">success</td><td class="m">+5.0</td><td>Within <code>0.03</code> sim of the target — episode ends</td></tr>
+            <tr><td class="m">fall / flip</td><td class="m">−1.0</td><td>CoM below <code>−0.2</code> sim (−2&nbsp;m world), or the body's up axis inverts</td></tr>
+            <tr><td class="m">freeze</td><td class="m">−1.0</td><td>CoM moves less than <code>1e-5</code> sim for <code>125</code> steps (2.5&nbsp;s)</td></tr>
+            <tr><td class="m">time</td><td class="m">−0.2 / maxStep</td><td>Every surviving step, so dawdling costs — a full 500-step episode with no progress scores exactly −0.200</td></tr>
           </tbody>
         </table>
       </div>
@@ -884,10 +1058,21 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         </span>
       </div>
 
+      <div class="note ok">
+        <span class="note-t">Diagnostic</span>
+        <span>
+          A run that sits at exactly <code>Mean Reward: -0.200</code> with <code>Std: 0.000</code> is the time penalty and
+          nothing else: every episode runs its full 500 steps and no other term ever fires. That is the signature of a
+          robot that isn't moving, not of bad hyperparameters. Watch <code>previousDistance</code> in the runtime state
+          during Play before you touch the YAML.
+        </span>
+      </div>
+
       <h3>How actions reach the muscles</h3>
 
       <p>
-        The policy outputs one continuous value per muscle voxel in <code>[-1, +1]</code>. That maps
+        The policy outputs one continuous value per muscle voxel in <code>[-1, +1]</code>. The C++ side
+        (<code>Apply_RL_Actions_To_Motors_Direct_Temperature_Control</code>) clamps it and maps it
         linearly to a voxel temperature, which drives thermal expansion or contraction:
       </p>
 
@@ -901,10 +1086,12 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       </div>
 
       <p>
-        The C++ side does not apply that target instantly. Each 1&nbsp;ms micro-step moves the current
-        temperature 2&nbsp;% of the way toward it, giving a first-order actuator with
-        τ&nbsp;≈&nbsp;49.5&nbsp;ms. That is what keeps a jumpy policy from exploding the mass-spring
-        solver — and it is why the previous action belongs in the observation.
+        The target is not applied instantly. Each 1&nbsp;ms micro-step moves the current temperature
+        <code>ALPHA = 2 %</code> of the way toward it, giving a first-order actuator with
+        τ&nbsp;≈&nbsp;49.5&nbsp;ms. On top of that, the first <strong>0.25&nbsp;s</strong> of every episode
+        ramps the signal from 0 to full, so a reset never slams the solver. That lag is what keeps a
+        jumpy policy from exploding the mass-spring system — and it is why the previous action belongs
+        in the observation.
       </p>
     </section>
 
@@ -918,8 +1105,9 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       </div>
 
       <p>
-        Observation and action sizes are <strong>derived</strong>, not typed. The agent pushes them into
-        <code>BehaviorParameters</code> from the profiles. Your job is to confirm they landed.
+        Observation and action sizes are <strong>derived</strong>, not typed.
+        <code>ApplyProfileSettingsToComponents()</code> pushes them into <code>BehaviorParameters</code>
+        from the profiles whenever an asset changes or the game starts. Your job is to confirm they landed.
       </p>
 
       <p>Open <strong>Behavior Parameters</strong> on <code>VoxRobot_00</code> and verify:</p>
@@ -952,6 +1140,12 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         previous action. Turn on <code>includeVoxelAngVel</code> and it becomes
         <code>9 + 9 × 33 + 33 = 339</code>. Either is fine — but a trained model is tied to whichever
         you used.
+      </p>
+
+      <p>
+        In general: <code>obs = 9 + perVoxel × observedVoxels + muscleCount</code>, where
+        <code>perVoxel</code> is 6 or 9, and <code>observedVoxels</code> is the subset length if you set one,
+        otherwise <code>expectedVoxelCount</code>.
       </p>
     </section>
 
@@ -1011,6 +1205,14 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <code>max_steps</code> counts agent steps <strong>summed across every robot</strong>. With four
         robots, 10&nbsp;M total is 2.5&nbsp;M per robot — worth remembering when reading TensorBoard.
       </p>
+
+      <div class="note">
+        <span class="note-t">Sizing</span>
+        <span>
+          <code>hidden_units: 512</code> and <code>num_layers: 3</code> suit the 240-dimensional Vox33 observation.
+          A body with a reduced observation subset does not need that capacity; 256 × 2 is a better starting point there.
+        </span>
+      </div>
     </section>
 
     <hr class="div">
@@ -1029,15 +1231,17 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         </li>
         <li>Wait for <code>Listening on port 5004</code>, then press <strong>Play</strong> in Unity.</li>
         <li>
-          Watch the console. These two lines tell you the wiring is correct:
+          Watch the console. These lines tell you the wiring is correct:
 <pre><code>[VoxelEngineCore] Total 2 robots indexed sequentially across 1 training areas.
-[VoxelRLManager] 1 robots, actionSize=33</code></pre>
+[VoxelRLManager] 1 robots, actionSize=33
+[VoxelRLManager] Python connection stabilized ready! Begin the first training cycle.</code></pre>
         </li>
       </ol>
 
       <p>
         Two robots indexed, one RL robot — the second is the companion. If <em>both</em> show as RL
-        robots, the companion has an agent component on it that should not be there.
+        robots, the companion has an agent component on it that should not be there. If
+        <code>actionSize</code> is anything but 33, your Body Profile's <code>muscleCount</code> is wrong.
       </p>
 
       <h3>First ten minutes on TensorBoard</h3>
@@ -1048,7 +1252,7 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
           <tbody>
             <tr>
               <td class="m">Cumulative Reward</td><td>Noisy but moving</td>
-              <td>Flat at zero → actions aren't reaching the muscles</td>
+              <td>Pinned at −0.200 → the robot isn't moving; actions aren't reaching the muscles</td>
             </tr>
             <tr>
               <td class="m">Episode Length</td><td>Near 500</td>
@@ -1063,14 +1267,48 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       </div>
 
       <div class="note ok">
-        <span class="note-t">Tip</span>
+        <span class="note-t">Do this first</span>
         <span>
           Before training, test the wiring by hand. Set Behavior Type to <strong>Heuristic Only</strong>
           and hold <kbd>A</kbd> or <kbd>D</kbd> — the built-in heuristic drives each muscle with a
-          phase-shifted sine, so the robot should visibly crawl. If it only puffs up uniformly or does
-          nothing, fix that before you spend GPU hours.
+          2&nbsp;Hz sine, phase-shifted by index, so the robot should visibly crawl. If it only puffs up
+          uniformly or does nothing, fix that before you spend GPU hours. For a new body, this open-loop
+          check is also how you find out whether the task is reachable at all.
         </span>
       </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── FPS ────────────────────────────── -->
+    <section id="fps">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Reference</div>
+        <h2>Modes and frame rate</h2>
+      </div>
+
+      <p>
+        Because one rendered frame is one decision cycle, the frame rate cap <em>is</em> the training speed cap.
+        <code>VoxelEngineCore</code> forces <code>vSyncCount = 0</code> at startup — otherwise the monitor refresh
+        rate would silently set your simulation speed — and then picks a cap by mode:
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Situation</th><th>targetFrameRate</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Training or inference with Python connected</td><td class="m">−1</td><td>Uncapped; matches <code>target_frame_rate: -1</code> in the YAML</td></tr>
+            <tr><td>Headless build</td><td class="m">−1</td><td>No screen, nothing to spare</td></tr>
+            <tr><td>ONNX inference, no Python, watching it</td><td class="m">inferenceWatchFps (50)</td><td>The only case where a real-time cap is meaningful: 1000 / (20 × 1&nbsp;ms) = 50&nbsp;fps is real time</td></tr>
+            <tr><td><code>is_ml_agent</code> off — free running</td><td class="m">freeRunRenderFps (60)</td><td>Physics free-runs in C++; the cap only saves GPU</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Both fps fields sit under <strong>Frame Rate Policy</strong> on <code>VoxelEngineCore</code>. You normally
+        leave them alone.
+      </p>
     </section>
 
     <hr class="div">
@@ -1079,32 +1317,224 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
     <section id="scale">
       <div class="sec-head">
         <div class="sec-eyebrow">Going wider</div>
-        <h2>Scaling up</h2>
+        <h2>Sizing for your CPU</h2>
       </div>
 
       <p>
-        Three scenes ship with the project. More arenas collect experience faster and give PPO a more
-        decorrelated batch.
+        More arenas collect experience faster and give PPO a more decorrelated batch. How many you can actually run is
+        decided by your CPU's <strong>physical</strong> core count — not its thread count — and on Windows by how those
+        cores are split into processor groups. Get this wrong and 16 arenas run slower than 4.
       </p>
+
+      <h3>Physical cores are the budget</h3>
+
+      <p>
+        Every robot is handed a <strong>contiguous block of physical cores that it owns exclusively</strong>. Two robots
+        never share a physical core. That rule is not tidiness: all robots are joined by the macro barrier on every
+        micro-step, so one robot waiting on a contended core drags the entire scene down with it.
+      </p>
+
+      <p>
+        Inside a robot's block, the default placement policy (<code>VX_TPC_ADAPTIVE</code>) spreads its threads one per
+        physical core and leaves the SMT siblings empty for Unity, Python and the OS. If a robot cannot find enough
+        contiguous cores, <em>only that robot</em> falls back to packing two threads onto one core — a local slowdown,
+        much cheaper than letting two robots collide.
+      </p>
+
+<pre><code>physical core 5 = logical CPU 10, 11
+physical core 6 = logical CPU 12, 13
+physical core 7 = logical CPU 14, 15
+
+spread  (default, threadCount 3)      packed  (fallback, same robot)
+  cpu[0] outer -> CPU 10                cpu[0] -> CPU 10 <span class="cm">┐ core 5 shared</span>
+  cpu[1] inner -> CPU 12                cpu[1] -> CPU 11 <span class="cm">┘</span>
+  cpu[2] inner -> CPU 14                cpu[2] -> CPU 12   <span class="cm">core 6</span>
+  <span class="cm">CPU 11, 13, 15 free for Unity</span>          <span class="cm">1 core saved, that robot runs slower</span></code></pre>
+
+      <p>
+        So a 64-core / 128-thread machine gives you a budget of <strong>64</strong>, not 128. The spare logical CPUs are
+        not capacity you can spend on physics; they are the headroom that keeps Unity's frame time sane.
+      </p>
+
+      <h3>A block cannot cross a processor group</h3>
+
+      <p>
+        Windows puts at most 64 logical CPUs in a <strong>processor group</strong>, so a 64-core / 128-thread machine is
+        two groups of 32 physical cores. A thread's affinity mask is 64 bits wide and therefore lives in exactly one
+        group. When a robot's block doesn't fit in what remains of the current group, the allocator jumps to the start of
+        the next one and the leftover cores are stranded — reported as <code>skipped</code>.
+      </p>
+
+      <div class="note ok">
+        <span class="note-t">Design rule</span>
+        <span>
+          Make the <strong>core count of one training area a divisor of the per-group core count</strong>. Then nothing is
+          stranded, every group tiles exactly, and the formula below is not an estimate but the answer. On a 64-core
+          machine the per-group count is 32, so aim for an arena costing 1, 2, 4, 8, 16 or 32 cores.
+        </span>
+      </div>
+
+      <h3>The formula</h3>
+
+<pre><code>c_i = ceil( t_i / S )          <span class="cm"># physical cores robot i needs</span>
+C   = Σ c_i                   <span class="cm"># physical cores one training area needs</span>
+
+N   = floor( (G × P − R) / C )                   <span class="cm"># core-limited arena count</span>
+N   = min( N, floor(128 / robots_per_area) )     <span class="cm"># hard robot ceiling</span></code></pre>
 
       <div class="tw">
         <table>
-          <thead><tr><th>Scene</th><th>Arenas</th><th>Sim robots</th><th>Outer threads</th></tr></thead>
+          <thead><tr><th>Symbol</th><th>Meaning</th><th>Where to read it</th></tr></thead>
           <tbody>
-            <tr><td class="m">SingleArenaScene</td><td class="m">1</td><td class="m">2</td><td class="m">2</td></tr>
-            <tr><td class="m">MultiArenaScene04</td><td class="m">4</td><td class="m">8</td><td class="m">8</td></tr>
-            <tr><td class="m">MultiArenaScene16</td><td class="m">16</td><td class="m">32</td><td class="m">32</td></tr>
+            <tr><td class="m">P</td><td>Physical cores per processor group</td><td><code>physicalCores</code> ÷ <code>groups</code> in the boot log</td></tr>
+            <tr><td class="m">G</td><td>Number of processor groups</td><td><code>groups</code> in the boot log</td></tr>
+            <tr><td class="m">R</td><td>Cores deliberately left free (<code>reserveCores</code>)</td><td>Config, default <code>0</code></td></tr>
+            <tr><td class="m">t_i</td><td><code>threadCount</code> of robot <em>i</em> in the arena</td><td>Prefab inspector</td></tr>
+            <tr><td class="m">S</td><td>Threads per physical core</td><td><code>1</code> under the default spread policy</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        The shipped <code>TrainingAreaVox</code> holds one RL robot at <code>threadCount 3</code> and one companion at
+        <code>1</code>, so <code>C = 4</code> — which divides 32 exactly. That is not a coincidence; it is why those
+        numbers were chosen.
+      </p>
+
+      <div class="note">
+        <span class="note-t">Ask the code</span>
+        <span>
+          <code>VxAff_MaxRepeats(pattern, n, &amp;cfg)</code> answers the same question using the real allocator, so it
+          accounts for group boundaries and packing that the formula only approximates. Pass the arena's per-robot thread
+          counts, e.g. <code>{3, 1}</code>.
+        </span>
+      </div>
+
+      <div class="note warn">
+        <span class="note-t">Hard ceiling</span>
+        <span>
+          Fixed arrays throughout the DLL cap the scene at <strong>128 robots total</strong>
+          (<code>g_is_Blow[128]</code>, <code>g_RL_needs_reset[128]</code>, <code>g_motorParams[128][1024]</code>, the
+          render and physics buffers, and the robot file-name table). Remember the companion counts.
+        </span>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── MACHINES ───────────────────────── -->
+    <section id="machines">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Worked examples</div>
+        <h2>Machine recipes</h2>
+      </div>
+
+      <h3>64 cores / 128 threads — 2 groups × 32</h3>
+
+      <p>What each arena composition costs, assuming the default one-thread-per-core spread and <code>reserveCores = 0</code>:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Arena threadCounts</th><th>C</th><th>Divides 32?</th><th>Max arenas</th><th>Robots</th></tr></thead>
+          <tbody>
+            <tr><td class="m">1, 1</td><td class="m">2</td><td class="m">yes</td><td class="m">32</td><td class="m">64</td></tr>
+            <tr><td class="m">2, 1</td><td class="m">3</td><td class="m">no</td><td class="m">20</td><td class="m">40</td></tr>
+            <tr><td class="m">3, 1</td><td class="m">4</td><td class="m">yes</td><td class="m">16</td><td class="m">32</td></tr>
+            <tr><td class="m">3, 3, 1, 1</td><td class="m">8</td><td class="m">yes</td><td class="m">8</td><td class="m">32</td></tr>
+            <tr><td class="m">7, 1</td><td class="m">8</td><td class="m">yes</td><td class="m">8</td><td class="m">16</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <code>2, 1</code> shows the cost of ignoring the divisor rule: <code>C = 3</code> fits ten times into 32 with two
+        cores left over in <em>each</em> group, so four physical cores are stranded for nothing.
+      </p>
+
+      <p>And the configurations actually measured on that machine, using the shipped <code>[3, 1]</code> arena:</p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Arenas</th><th>Robots</th><th>Cores used</th><th>spare</th><th>skipped</th><th>When to pick it</th></tr></thead>
+          <tbody>
+            <tr><td class="m">16</td><td class="m">32</td><td class="m">64 / 64</td><td class="m">0</td><td class="m">0</td>
+                <td>Exactly full. Nothing left to park Unity's main thread on</td></tr>
+            <tr><td class="m"><strong>15</strong></td><td class="m"><strong>30</strong></td><td class="m"><strong>60 / 64</strong></td><td class="m"><strong>4</strong></td><td class="m"><strong>0</strong></td>
+                <td><strong>Adopted.</strong> Group 0 takes 8 arenas exactly, Group 1 takes 7 plus 4 spare cores</td></tr>
+            <tr><td class="m">14</td><td class="m">28</td><td class="m">56 / 64</td><td class="m">8</td><td class="m">0</td>
+                <td>Editor and a local Python trainer sharing the same box</td></tr>
+            <tr><td class="m">16 × [2,1]</td><td class="m">32</td><td class="m">48 / 64</td><td class="m">16</td><td class="m">0</td>
+                <td>Most agents per second; least parallelism inside each robot</td></tr>
+            <tr><td class="m">8 × [6,1]</td><td class="m">16</td><td class="m">56 / 64</td><td class="m">8</td><td class="m">4</td>
+                <td><code>C = 7</code> doesn't divide 32. Set <code>reserveCores = 4</code> and the stranding disappears</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="note warn">
+        <span class="note-t">reserveCores</span>
+        <span>
+          It only clears cores at the <strong>front of Group 0</strong>, shifting every block after it. On a layout that
+          already tiles perfectly — 15 arenas of <code>[3, 1]</code> — setting <code>reserveCores = 2</code> strands cores
+          at the group boundary and oversubscribes the last arena. Leave it at <code>0</code> unless the log shows
+          <code>skipped &gt; 0</code>, or you are running a graphics demo and want 4–8 whole cores held back.
+        </span>
+      </div>
+
+      <h3>8 cores / 16 threads — a typical development machine</h3>
+
+      <p>
+        One group, <code>P = 8</code>. By the formula an arena costing 4 cores allows two arenas. In practice
+        <strong>four arenas is the throughput optimum on this hardware</strong>, and the allocator prints
+        <code>[OVERSUBSCRIBED]</code>. That warning is correct and you should accept it here.
+      </p>
+
+      <ul class="bul">
+        <li>4 arenas × <code>[3, 1]</code> = 16 threads landing on 16 logical CPUs, one each. Nothing is double-booked;
+            the fallback simply uses the SMT siblings the big-machine policy would have left idle.</li>
+        <li>Robots pair symmetrically — 0 with 4, 1 with 5 — matching thread counts as well as positions.</li>
+        <li>Dropping to two arenas would leave every sibling unused and lose real throughput.</li>
+        <li>The price is <code>spare = 0</code>: Unity's main thread shares a core with physics, so frames will jitter.
+            At this core count there is no clean way around it.</li>
+      </ul>
+
+      <div class="note">
+        <span class="note-t">Rule of thumb</span>
+        <span>
+          Above roughly 32 physical cores, treat <code>[OVERSUBSCRIBED]</code> as a defect to fix. At 16 or fewer, treat
+          it as the expected state and check a different thing instead: that <strong>total threads ≈ logical CPU
+          count</strong>, with no core carrying three or more.
+        </span>
+      </div>
+
+      <h3>Quick reference</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Machine</th><th>Groups × cores</th><th>Arena</th><th>Arenas</th><th>Cores used</th><th>spare</th></tr></thead>
+          <tbody>
+            <tr><td class="m">64C / 128T</td><td class="m">2 × 32</td><td class="m">[3, 1]</td><td class="m">15</td><td class="m">60</td><td class="m">4</td></tr>
+            <tr><td class="m">32C / 64T</td><td class="m">1 × 32</td><td class="m">[3, 1]</td><td class="m">7</td><td class="m">28</td><td class="m">4</td></tr>
+            <tr><td class="m">16C / 32T</td><td class="m">1 × 16</td><td class="m">[3, 1]</td><td class="m">3</td><td class="m">12</td><td class="m">4</td></tr>
+            <tr><td class="m">16C / 24T</td><td class="m">1 × 16</td><td class="m">[1, 1]</td><td class="m">8</td><td class="m">16</td><td class="m">0</td></tr>
+            <tr><td class="m">8C / 16T</td><td class="m">1 × 8</td><td class="m">[3, 1]</td><td class="m">4</td><td class="m">16 thr</td><td class="m">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Drop one arena from any of these rows to buy four spare cores for Unity. On hybrid chips (P-cores plus E-cores,
+        such as a 16-core / 24-thread part) the allocator treats every physical core as equal, which it is not — take the
+        row as a starting point and confirm with a throughput sweep rather than trusting it.
+      </p>
+
+      <div class="note warn">
         <span class="note-t">Threads</span>
         <span>
-          Total threads = <strong>robots × per-robot <code>threadCount</code></strong>. With 16 arenas and
-          <code>threadCount: 3</code> on the RL robot you are at 64 threads before Unity's own. Oversubscribe
-          a 64-core machine and 16 arenas will run <em>slower</em> than 4. Drop
-          <code>threadCount</code> to 2 in the 16-arena scene.
+          <strong>Prefer more arenas over more threads per robot.</strong> A 33-voxel body gives each thread a few dozen
+          elements of work per phase, against four OpenMP barriers per 1&nbsp;ms micro-step — past 3 or 4 threads the
+          synchronisation costs more than the work and the robot runs <em>slower</em>. Roughly: a few hundred elements per
+          thread, minimum. Scaling wide beats scaling deep.
         </span>
       </div>
 
@@ -1118,6 +1548,85 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
 
     <hr class="div">
 
+    <!-- ── AFFINITY LOG ───────────────────── -->
+    <section id="affinity">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Verify</div>
+        <h2>Reading the core map</h2>
+      </div>
+
+      <p>
+        You do not have to guess whether the layout worked. The allocator prints the whole assignment at boot; ten
+        seconds of reading it replaces an afternoon of benchmarking. This is a healthy 64-core run, 15 arenas:
+      </p>
+
+<pre><code>[VxAff] topology: logical=128  physicalCores=64  groups=2
+[VxAff] assign: robots=30  cores used=60 / 64  spare=4  skipped=0  mode=ADAPTIVE
+[VxAff]   Group 0 : 32/32 cores used, 16 robots
+[VxAff]   Group 1 : 28/32 cores used, 14 robots
+[VxAff]   robot   0 : Group 0  cores   0..  2 (3)  threads 3  <span class="hl">spread</span>  cpu 0 2 4
+[VxAff]   robot   1 : Group 0  cores   3..  3 (1)  threads 1  <span class="hl">spread</span>  cpu 6
+[VxAff] calling thread -&gt; Group 1, 4 spare physical core(s), mask 0xFF00000000000000
+[C++] sim-thread team pinned: outer=30  physCores=64  spare=4  nested=1  rt=libomp(clang)
+[VX] ===== ALL 30 inner workers touched. nested OK. =====</code></pre>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>What you see</th><th>What it means</th></tr></thead>
+          <tbody>
+            <tr><td class="mw"><code>spread</code>, and <code>(n)</code> equals <code>threads</code></td>
+                <td>✅ One physical core per thread. Ideal</td></tr>
+            <tr><td class="mw"><code>cpu</code> numbers all even, two apart</td>
+                <td>✅ SMT siblings left free for Unity and Python</td></tr>
+            <tr><td class="mw"><code>PACKED</code>, odd cpu numbers mixed in</td>
+                <td>⚠ That robot fell back to sibling packing</td></tr>
+            <tr><td class="mw"><code>[SOME ROBOTS PACKED]</code></td>
+                <td>⚠ Not enough contiguous cores. Drop an arena or lower <code>threadCount</code></td></tr>
+            <tr><td class="mw">Overlapping <code>cores</code> ranges, <code>[OVERSUBSCRIBED]</code></td>
+                <td>❌ Cores exhausted — <em>every</em> robot slows down. Expected on small machines only</td></tr>
+            <tr><td class="mw"><code>skipped=0</code></td>
+                <td>✅ No group-boundary waste; your arena cost divides the per-group core count</td></tr>
+            <tr><td class="mw"><code>Group 1 … 0 robots</code> + warning</td>
+                <td>❌ Half the machine idle. Add arenas</td></tr>
+            <tr><td class="mw"><code>spare=N</code></td>
+                <td>Whole physical cores left over for Unity, Python and the OS</td></tr>
+            <tr><td class="mw"><code>nested=1</code>, <code>ALL n inner workers touched</code></td>
+                <td>✅ Nested parallelism is genuinely running, not silently serialised</td></tr>
+            <tr><td class="mw"><code>rt=libomp(clang)</code> / <code>rt=vcomp(MSVC)</code></td>
+                <td>Which OpenMP runtime — i.e. which DLL build you are actually running</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        <strong>The baseline for a healthy training run:</strong> <code>mode=ADAPTIVE</code>, every robot
+        <code>spread</code>, <code>skipped=0</code>, no <code>PACKED</code>, no <code>[OVERSUBSCRIBED]</code>, and every
+        processor group holding robots.
+      </p>
+
+      <h3>Confirming it in Task Manager</h3>
+
+      <p>
+        Performance ▸ CPU ▸ right-click the graph ▸ <strong>Logical processors</strong>. With one thread per core, only
+        the <strong>even-numbered</strong> logical CPUs should be carrying physics load. Odd-numbered ones showing
+        activity are Unity, Python and the OS using the siblings — that is exactly what the spare capacity is for. An
+        older symptom worth recognising: the first half of the graph pinned and the second half flat means the process
+        never reached the second processor group.
+      </p>
+
+      <div class="note">
+        <span class="note-t">Unity's thread</span>
+        <span>
+          <code>CPP_Pin_Caller_To_Spare_Cores()</code>, called from the Unity main thread, parks it on the spare cores —
+          the <code>calling thread -&gt; Group 1, 4 spare physical core(s)</code> line above. It moves the
+          <strong>main thread only</strong>; the render thread and Burst job workers stay unpinned. If it reports zero
+          spare cores, drop an arena rather than ignoring it.
+        </span>
+      </div>
+    </section>
+
+    <hr class="div">
+
     <!-- ── BUILD ──────────────────────────── -->
     <section id="build">
       <div class="sec-head">
@@ -1127,8 +1636,9 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
 
       <p>
         Training against a built player is faster than the editor. Open
-        <code>VoxUnityML ▸ Auto Build (Client &amp; Server)</code>, pick a scene, and press the button —
-        it produces a graphics build and a headless server build in one pass.
+        <code>VoxUnityML ▸ Auto Build (Client &amp; Server)</code>, pick a scene from the dropdown, and press the
+        button — it produces a graphics build and a headless server build in one pass, wiping each output folder first
+        and copying <code>StreamingAssets</code> across.
       </p>
 
 <pre><code>VoxUnityML_Auto_Builds/
@@ -1145,8 +1655,40 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
 
       <p>
         Only then does <code>no_graphics</code> in the YAML do anything — in the editor it is ignored.
-        Everything else comes from your current Player Settings and the Build Profiles checkboxes.
+        The builder writes <strong>only the scene you selected</strong>; everything else comes from your current
+        Player Settings and the Build Profiles checkboxes.
       </p>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── SILENT ─────────────────────────── -->
+    <section id="silent">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Know these</div>
+        <h2>Failures that report nothing</h2>
+      </div>
+
+      <p>
+        Each of these leaves the console clean and the dimensions correct. They are worth knowing before
+        you spend an afternoon on one.
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Mistake</th><th>What actually happens</th><th>What you see</th></tr></thead>
+          <tbody>
+            <tr><td class="mw"><code>Target Transform</code> left null</td><td>Whole distance-reward block is skipped</td><td>No error; reward never rises</td></tr>
+            <tr><td class="mw"><code>muscleCount</code> below the real muscle count</td><td>Surplus muscles hold a target of zero forever</td><td>Part of the robot hangs limp</td></tr>
+            <tr><td class="mw"><code>observedVoxelIndices</code> resized but left at 0</td><td>Voxel 0 is observed N times</td><td>Dimensions match, content is meaningless</td></tr>
+            <tr><td class="mw">Out-of-range voxel index in that array</td><td>Those 6 slots stay zero</td><td>Dimensions still match</td></tr>
+            <tr><td class="mw">Landmark voxels nearly collinear</td><td>Local frame falls back to the previous up vector</td><td>Observation quietly freezes</td></tr>
+            <tr><td class="mw"><code>localY</code> inverted (forward pair swapped)</td><td>Flip detection fires on step 1</td><td>Every episode ends instantly</td></tr>
+            <tr><td class="mw">NaN in the state buffer</td><td>CoM returns <code>Vector3.zero</code></td><td>Robot silently treated as at the origin</td></tr>
+            <tr><td class="mw">A constant written in the wrong unit</td><td>Off by a factor of 10</td><td>See <a class="inl" href="#units">Two length units</a></td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <hr class="div">
@@ -1184,6 +1726,24 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
       </div>
 
       <div class="tsq">
+        <div class="tsq-q">Mean Reward stuck at exactly −0.200</div>
+        <div class="tsq-a">
+          That is <code>−0.2 / 500 × 500</code>: the time penalty alone, with every episode running to full length and no
+          other term ever firing. The robot is not travelling. Check <code>previousDistance</code> in the agent's runtime
+          state during Play — if it barely changes over 500 steps, the problem is actuation or body shape, not
+          hyperparameters. Verify open-loop locomotion in Heuristic mode first.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">"Target reached" fires when the robot is nowhere near the target</div>
+        <div class="tsq-a">
+          <code>targetReachThreshold</code> is in sim units. <code>0.2</code> means 2&nbsp;metres, not 20&nbsp;cm. Use
+          <code>0.03</code> for Vox33.
+        </div>
+      </div>
+
+      <div class="tsq">
         <div class="tsq-q">Only part of the robot moves</div>
         <div class="tsq-a">
           <code>muscleCount</code> is smaller than the real number of muscle voxels. Voxels beyond the
@@ -1196,7 +1756,8 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <div class="tsq-a">
           The lock-step is stalled. <code>VoxelRLManager</code> waits for <em>every</em> agent to submit
           before stepping C++, so one agent with a missing Task Profile or a null manager reference
-          freezes the whole scene. Check the console count matches the arenas you expect.
+          freezes the whole scene. Check the console count matches the arenas you expect. Remember the
+          first 1.5&nbsp;s of silence is intentional.
         </div>
       </div>
 
@@ -1213,9 +1774,170 @@ hr.div { border: none; border-top: 1px solid var(--rule); margin: 0 0 34px; }
         <div class="tsq-q">Episodes end almost immediately</div>
         <div class="tsq-a">
           Flip detection is working, possibly too well. It compares the body's up axis against world up;
-          soften it by requiring a deeper tilt, or raise <code>freezeStepLimit</code> if the freeze check
-          is the one firing.
+          if the forward or right voxel pair is ordered the wrong way the up axis is inverted from step one.
+          Otherwise soften the check, or raise <code>freezeStepLimit</code> if the freeze test is the one firing.
         </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Debug.Log lines missing from a standalone build's console</div>
+        <div class="tsq-a">
+          The console hook is attached in <code>VoxelEngineCore.Awake()</code>; anything logged before that never reaches
+          the window. Check <code>%USERPROFILE%\AppData\LocalLow\&lt;Company&gt;\&lt;Product&gt;\Player.log</code> — if the
+          line is there, it is a timing problem, not a missing call. Set <code>VoxelEngineCore</code> to −1000 in Script
+          Execution Order, and put verification logs inside <code>VoxelRLManager.InitializeRL()</code>. Note the ServerMode
+          executable has no console window at all.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">[VxAff] … [OVERSUBSCRIBED]</div>
+        <div class="tsq-a">
+          Physical cores are exhausted and robot blocks now overlap. Because every robot is joined by the macro barrier,
+          this slows down <em>all</em> of them, not just the overlapping ones. Reduce the arena count or the per-robot
+          <code>threadCount</code> until <code>cores used ≤ physicalCores</code>. On a machine with 16 physical cores or
+          fewer this warning is expected — see <a class="inl" href="#machines">Machine recipes</a>.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">[VxAff] [SOME ROBOTS PACKED]</div>
+        <div class="tsq-a">
+          One or more robots could not find enough contiguous free cores and fell back to putting two threads on one
+          physical core. The run is valid — packing costs only the robots it happened to — but it means you are close to
+          the limit. Drop one arena, or lower <code>threadCount</code> so that the per-arena core count divides the
+          per-group core count.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">Group 1 : 0/32 cores used, 0 robots</div>
+        <div class="tsq-a">
+          Half the machine is idle. The allocator fills groups in order, so this means you simply asked for too few
+          robots to reach the second group. Add arenas. If instead the robots <em>are</em> there but nothing is pinned,
+          check that the DLL is the patched build — the old code computed the group as <code>thread_id / 64</code>, which
+          is always 0.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">16 arenas runs slower than 4</div>
+        <div class="tsq-a">
+          Almost always oversubscription: total threads exceeded physical cores, so the blocks overlap. Check
+          <code>cores used</code> and <code>spare</code> in the assignment log rather than guessing. The second suspect is
+          <code>threadCount</code> set too high for a small body — a 33-voxel robot gives each thread only a few dozen
+          elements against four OpenMP barriers per micro-step.
+        </div>
+      </div>
+
+      <div class="tsq">
+        <div class="tsq-q">OMP: Warning #182</div>
+        <div class="tsq-a">
+          Something set <code>OMP_PROC_BIND</code>. Don't — <code>KMP_AFFINITY=disabled</code>, which the compatibility
+          layer sets before the first OpenMP call, already covers it. All pinning in this project is done explicitly by
+          <code>VoxCoreAffinity</code>, because libomp does not handle Windows processor groups correctly.
+        </div>
+      </div>
+    </section>
+
+    <hr class="div">
+
+    <!-- ── VOX516 ─────────────────────────── -->
+    <section id="vox516">
+      <div class="sec-head">
+        <div class="sec-eyebrow">Appendix</div>
+        <h2>Moving to a bigger body</h2>
+      </div>
+
+      <p>
+        Once Vox33 trains, the next body in the project is <code>maxFit_V516_M142.vox</code> — 516 voxels,
+        142 muscles, a hollow box on four corner legs with a solid rigid top plate. Scenes
+        <code>Vox516_Single_Arena</code> and <code>Vox516_Multi_Arena_04</code> are set up for it. Three things
+        change, and the third is the one people miss.
+      </p>
+
+      <h3>1. New landmarks, new constants</h3>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>Field</th><th>Vox33</th><th>Vox516</th></tr></thead>
+          <tbody>
+            <tr><td class="m">expectedVoxelCount / muscleCount</td><td class="m">33 / 33</td><td class="m">516 / 142</td></tr>
+            <tr><td class="m">centerVoxelIdx</td><td class="m">16</td><td class="m">239</td></tr>
+            <tr><td class="m">forwardVoxelA / B</td><td class="m">17 / 15</td><td class="m">38 / 476</td></tr>
+            <tr><td class="m">rightVoxelA / B</td><td class="m">21 / 11</td><td class="m">257 / 227</td></tr>
+            <tr><td class="m">minSpawnDist / maxSpawnDist</td><td class="m">2.5 / 3.5</td><td class="m">3.2 / 4.2</td></tr>
+            <tr><td class="m">targetReachThreshold</td><td class="m">0.03</td><td class="m">0.07</td></tr>
+            <tr><td class="m">behaviorName</td><td class="m">VoxBot33</td><td class="m">VoxBot516</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        The landmark voxels sit on the rigid top plate on purpose: a frame built from deforming voxels wobbles,
+        and every observation wobbles with it. The pair order matters — swapping <code>forwardVoxelA/B</code>
+        flips the derived up axis and every episode then ends on step one.
+      </p>
+
+      <h3>2. Observe a subset, not the whole body</h3>
+
+      <p>
+        296 of the 516 voxels are the rigid top plate. In the body-local frame their positions relative to the
+        centre of mass are nearly constant — and <code>normalize: true</code> divides by the standard deviation,
+        so a near-zero-variance channel gets amplified and saturated at ±5. Observing everything would give you
+        3 signal dimensions against roughly 1,776 amplified-noise ones.
+      </p>
+
+      <p>
+        The fix is <code>observedVoxelIndices</code> on the Body Profile: eight voxels, a foot and a mid-leg on each
+        of the four legs.
+      </p>
+
+<pre><code>observedVoxelIndices = [0, 2, 68, 70, 438, 440, 506, 508]
+
+obs = 9 + 6 × 8 + 142 = 199        <span class="cm"># down from 3247</span>
+act = 142</code></pre>
+
+      <p>
+        Body posture is already carried by the local frame itself, so the top plate contributes nothing. Centre of
+        mass and the local frame are still computed from <strong>all 516</strong> voxels — that has to match the
+        reward's reference — only the per-voxel observation loop uses the subset.
+      </p>
+
+      <div class="note warn">
+        <span class="note-t">Inspector trap</span>
+        <span>
+          Setting <code>Size</code> to 8 fills the array with eight zeros. If you don't then type all eight values, the
+          agent observes voxel 0 eight times, at the correct dimension count, with no warning. The shipped asset
+          <code>RobotBody_Vox516_Part</code> already has them; <code>RobotBody_Vox516</code> keeps full observation for
+          A/B comparison.
+        </span>
+      </div>
+
+      <h3>3. Expect the action space to be the real bottleneck</h3>
+
+      <p>
+        142 independent continuous actions is a lot. Policy-gradient variance grows with action dimension, and
+        ML-Agents starts with <code>log σ = 0</code>, so at step zero all 142 muscles draw independently across the
+        full ±1 range — with <code>CTE 0.02 × TEMP_MAX 12</code> that is a 24&nbsp;% strain command each. Coherent gait
+        emerging from that by chance is essentially impossible.
+      </p>
+
+      <p>
+        The cheapest remedy is to group muscles in the DLL — by leg and by height, say twelve groups — and index the
+        action array by group id inside
+        <code>Apply_RL_Actions_To_Motors_Direct_Temperature_Control</code>. Action drops from 142 to 12, and since the
+        previous-action block shrinks with it, the observation drops to 69. The longer-term route is CPG modulation,
+        where the policy shapes a fixed oscillator's amplitude and phase rather than commanding voxels directly.
+      </p>
+
+      <div class="note ok">
+        <span class="note-t">Before you train</span>
+        <span>
+          Run the open-loop check on any new body. In Heuristic mode, can a hand-made sine gait move it 2&nbsp;m in
+          20&nbsp;s, and can it turn? If not, no amount of PPO will find a gait that doesn't exist, and half an hour
+          here saves days.
+        </span>
       </div>
     </section>
 
